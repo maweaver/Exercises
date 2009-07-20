@@ -416,11 +416,15 @@
 
 ;;; 2.18 ;;;
 
+; (1 . (2 . 3)) -> (3 . (2 . 1))
+
+(define nil (cdr (list 1)))
+
 (define (reverse l)
-	(define (reverse-step l rest)
-	(if (null? l)
-		l
-		(cons (reverse (cdr l)) (car l))))
+	(define (reverse-step l reversed)
+		(if (null? l) reversed
+			(reverse-step (cdr l) (cons (car l) reversed))))
+	(reverse-step l nil))
 
 (display (reverse (list 1 4 9 16 25)))
 (newline)
