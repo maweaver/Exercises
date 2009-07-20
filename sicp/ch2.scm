@@ -447,5 +447,21 @@
 						(first-denomination coin-values))
 					coin-values)))))
 
-(display (cc 100 us-coins))
+;(display (cc 100 us-coins))
+;(newline)
+
+;;; 2.20 ;;;
+
+(define (same-parity f . l)
+	(define (filter l predicate)
+		(if (null? l) l
+			(if (predicate (car l)) (cons (car l) (filter (cdr l) predicate))
+				(filter (cdr l) predicate))))
+	(if (even f) (filter l even)
+		(filter l odd)))
+
+(display (same-parity 1 2 3 4 5 6 7))
 (newline)
+(display (same-parity 2 3 4 5 6 7))
+(newline)
+
