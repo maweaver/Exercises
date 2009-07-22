@@ -463,8 +463,171 @@
 		(if (even f) (filter l even)
 			(filter l odd))))
 
-(display (same-parity 1 2 3 4 5 6 7))
-(newline)
-(display (same-parity 2 3 4 5 6 7))
-(newline)
+;(display (same-parity 1 2 3 4 5 6 7))
+;(newline)
+;(display (same-parity 2 3 4 5 6 7))
+;(newline)
+
+;;; 2.21 ;;;
+
+(define (square-list items)
+	(if (null? items)
+		nil
+		(cons (* (car items) (car items)) (square-list (cdr items)))))
+
+;(display (square-list (list 1 2 3 4)))
+;(newline)
+
+(define (square-list items)
+	(map (lambda (x) (* x x)) items))
+
+;(display (square-list (list 1 2 3 4)))
+;(newline)
+
+;;; 2.22 ;;;
+
+; Because the square happens inside the call, the list is built from the
+; bottom up, starting from the end.  This reverses the result.
+;
+; Reversing the arguments to cons does not fix the problem, since instead
+; you end up with something like ((nil . 1) . 2), which is not a proper list.
+
+;;; 2.23 ;;;
+
+(define (for-each f l)
+	(cond
+		((null? l) #t)
+		(else 
+			(f (car l))
+			(for-each f (cdr l)))))
+
+;(for-each (lambda (x) (newline) (display x))
+;	(list 57 321 88))
+;(newline)
+
+;;; 2.24 ;;;
+
+; (list 1 (list 2 (list 3 4)))
+;
+; (1 (2 (3 4)))
+;
+; o--o--/
+; |  |
+; 1  |
+;    |
+; 2--o--o--/
+;       |
+;    3--o--o--/
+;          |
+;          4
+;
+; (1 (2 (3 4)))
+;     / \
+;    1   (2 (3 4))
+;          / \
+;         2 (3 4)
+;            /  \
+;           3    4
+
+;;; 2.25 ;;;
+
+;(display (car (cdr (car (cdr (cdr (list 1 3 (list 5 7) 9)))))))
+; (newline)
+
+;(display (car (car (list (list 7)))))
+;(newline)
+
+;(display (car (cdr (car (cdr (car (cdr (car (cdr (car (cdr (car (cdr (list 1 (list 2 (list 3 (list 4 (list 5 (list 6 7)))))))))))))))))))
+; (newline)
+
+;;; 2.26 ;;;
+
+; (define x (list 1 2 3))
+; (define y (list 4 5 6))
+
+; guile> (append x y)
+; (1 2 3 4 5 6)
+
+; guile> (cons x y)
+; ((1 2 3) 4 5 6)
+
+; guile> (list x y)
+; ((1 2 3) (4 5 6))
+
+;;; 2.27 ;;;
+
+(define (deep-reverse l)
+	(define (reverse-step l reversed)
+		(cond 
+			((null? l) reversed)
+			((pair? (car l)) (reverse-step (cdr l) (cons (deep-reverse (car l)) reversed)))
+			(else (reverse-step (cdr l) (cons (car l) reversed)))))
+	(reverse-step l nil))
+
+(define x (list (list 1 2) (list 3 4)))
+
+;(display (reverse x))
+;(newline)
+
+;(display (deep-reverse x))
+;(newline)
+
+;;; 2.28 ;;;
+
+(define (fringe l)
+	(define (fringe-step l fringed)
+		(cond
+			((null? l) fringed)
+			((pair? (car l)) (append fringed (append (fringe (car l)) (fringe-step (cdr l) fringed))))
+			(else (fringe-step (cdr l) (append fringed (list (car l)))))))
+	(fringe-step l nil))
+
+(define x (list (list 1 2) (list 3 4)))
+
+;(display (fringe x))
+;(newline)
+
+;(display (fringe (list x x)))
+;(newline)
+
+;;; 2.29 ;;;
+
+(define (make-mobile left right)
+	(list left right))
+
+(define (make-branch length structure)
+	(list length structure))
+
+;;;; a. ;;;;
+
+(define (left-branch m) (car m))
+(define (right-branch m) (cadr m))
+
+(define (branch-length b) (car b))
+(define (branch-structure b) (cadr b))
+
+;(display (left-branch (make-mobile (make-branch 1 2) (make-branch 3 4))))
+;(newline)
+
+;(display (right-branch (make-mobile (make-branch 1 2) (make-branch 3 4))))
+;(newline)
+
+;(display (branch-length (make-branch 1 2)))
+;(newline)
+
+;(display (branch-structure (make-branch 1 2)))
+;(newline)
+
+;;;; b. ;;;;;
+
+(define (total-weight m)
+	(if (pair? (branch-structure m))
+		(+ (total-weight (left-branch m)) (total-weight (right-branch m)))
+		(branch-structure m)))
+
+;(display (total-weight (make-mobile (make-branch 1 2) (make-branch 3 4))))
+;(newline)
+
+;;;; c. ;;;;;
+
 
