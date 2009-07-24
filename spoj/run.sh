@@ -19,7 +19,7 @@ function runOcaml() {
 }
 
 function runD() {
-	/home/matt/Apps/dmd/linux/bin/dmd $argv[1] -ofdrun -debug
+	/home/matt/Apps/dmd/linux/bin/dmd $argv[1] -ofdrun -debug -w -gc
 	time ./drun < $argv[2] > $argv[3]
 }
 	
