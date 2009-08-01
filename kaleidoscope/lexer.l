@@ -1,7 +1,7 @@
 %option noyywrap
 
 %{
-#include "y.tab.h"
+#include "parser.tab.h"
 
 char *identifier_str;
 %}

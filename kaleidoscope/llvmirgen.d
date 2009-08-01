@@ -1,4 +1,6 @@
 import ast;
+import stack;
+
 import std.stdio;
 import std.string;
 
@@ -17,12 +19,16 @@ extern(C) {
 	LLVMTypeRef LLVMFunctionType(LLVMTypeRef returnType, LLVMTypeRef *paramTypes, uint paramCount, int isVarArg);
 	
 	LLVMBuilderRef LLVMCreateBuilder();
+	LLVMValueRef LLVMBuildAdd(LLVMBuilderRef b, LLVMValueRef lhs, LLVMValueRef rhs, char *msg);
+	LLVMValueRef LLVMBuildSub(LLVMBuilderRef b, LLVMValueRef lhs, LLVMValueRef rhs, char *msg);
+	LLVMValueRef LLVMBuildMul(LLVMBuilderRef b, LLVMValueRef lhs, LLVMValueRef rhs, char *msg);
+	LLVMValueRef LLVMBuildFDiv(LLVMBuilderRef b, LLVMValueRef lhs, LLVMValueRef rhs, char *msg);
 	
 	LLVMValueRef LLVMConstReal(LLVMTypeRef t, double n);
 	LLVMValueRef LLVMAddFunction(LLVMModuleRef m, char *name, LLVMTypeRef fType);
 	void LLVMSetLinkage(LLVMValueRef Global, int Linkage);
 	
-	LLVMDisposeMessage(char *message);
+	void LLVMDisposeMessage(char *message);
 }
 
 class LlvmIrGen: ASTNodeVisitor {
@@ -33,11 +39,11 @@ class LlvmIrGen: ASTNodeVisitor {
 	LLVMBuilderRef builderRef;
 	
 	LLVMTypeRef doubleType;
-	LLVMValueRef[] parentValues;
+	Stack!(LLVMValueRef) parentValues;
 	
 	LLVMValueRef currentFunction;
 	LLVMValueRef[string] curentFunctionParams;
-	LLVMValueRef[] expressions;
+	Stack!(LLVMValueRef) expressions;
 	
 	LLVMTypeRef getFunctionType(int numParams) {
 		LLVMTypeRef[] params;
@@ -50,46 +56,46 @@ class LlvmIrGen: ASTNodeVisitor {
 	
 	public:
 	
-	LLVMModuleRef generateModule(string name, ASTRootNode root) {
+	LLVMModuleRef generateModule(string name, Statement root) {
 		moduleRef = LLVMModuleCreateWithName(toStringz(name));
 		builderRef = LLVMCreateBuilder();
 		doubleType = LLVMDoubleType();
 		
-		root.visit(this);
+		root.accept(TraversalOrder.postorder, this);
 		
 		LLVMDumpModule(moduleRef);
 		return moduleRef;
 	}
 	
-	void visit(ASTRootNode rootNode) {
+	void visit(ASTNode rootNode) {
+	}
+	
+	void visit(Statement statement) {
 	}
 	
 	void visit(Number number) {
-		expressions.length += 1;
-		expressions[expressions.length - 1] = LLVMConstReal(doubleType, number.val);
+		expressions.push(LLVMConstReal(doubleType, number.val));
 	}
 	
 	void visit(Variable variable) {
-		expressions.length += 1;
-		expressions[expressions.length - 1] = currentFunctionParams[variable.name];
+		// expressions.push(currentFunctionParams[variable.name]);
 	}
 	
 	void visit(BinaryExpression binaryExpression) {
-		LLVMValueRef lhs = expressions[expressions.length - 3];
-		LLVMValueRef rhs = expressions[expressions.length - 2];
+		LLVMValueRef lhs = expressions.pop();
+		LLVMValueRef rhs = expressions.pop();
 		
 		LLVMValueRef comboExpression = null;
-		switch(binaryExpression.op) {
-			case '+': comboExpression = LLVMBuildAdd(builderRef, lhs, rhs, "addtmp"); break;
-			case '-': comboExpression = LLVMBuildSub(builderRef, lhs, rhs, "subtmp"); break;
-			case '*': comboExpression = LLVMBuildMul(builderRef, lhs, rhs, "multmp"); break;
-			case '/': comboExpression = LLVMBuildFDiv(builderRef, lhs, rhs, "divtmp"); break;
-			default: LLVMDisposeMessage(toStringz("Unexpected operator '" ~ binaryExpression.op ~ "'")); break;
+		switch(binaryExpression.operation) {
+			case '+': comboExpression = LLVMBuildAdd(builderRef, lhs, rhs, toStringz("addtmp")); break;
+			case '-': comboExpression = LLVMBuildSub(builderRef, lhs, rhs, toStringz("subtmp")); break;
+			case '*': comboExpression = LLVMBuildMul(builderRef, lhs, rhs, toStringz("multmp")); break;
+			case '/': comboExpression = LLVMBuildFDiv(builderRef, lhs, rhs, toStringz("divtmp")); break;
+			default: LLVMDisposeMessage(toStringz("Unexpected operator '" ~ binaryExpression.operation ~ "'")); break;
 		}
 		
 		if(comboExpression) {
-			expressions.length -= 1;
-			expressions[expressions.length - 1] = comboExpression;
+			expressions.push(comboExpression);
 		}
 	}
 	
@@ -108,19 +114,16 @@ class LlvmIrGen: ASTNodeVisitor {
 		currentFunction = LLVMAddFunction(moduleRef, toStringz(prototype.name), functionType);
 		LLVMSetLinkage(currentFunction, LLVMExternalLinkage);
 		
-		currentFunctionParams.length = flatArgs.length;
-		for(idx, arg; prototype.flatArgs) {
+/*		currentFunctionParams.length = flatArgs.length;
+		foreach(idx, arg; prototype.flatArgs) {
 			currentFunctionParams[arg.name] = LLVMGetParam(currentFunction, idx);
-		}
+		}*/
 	}
 	
 	void visit(PrototypeArg prototypeArg) {
 	}
 	
 	void visit(Extern externNode) {
-	}
-	
-	void visit(ASTNode node) {
 	}
 	
 	void unvisit(ASTNode node) {

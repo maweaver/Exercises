@@ -1,12 +1,15 @@
 import ast;
+import stack;
+
 import std.math;
 import std.stdio;
 import std.string;
 
 class DotGen: ASTNodeVisitor {
+	
 	private:
 	
-	ASTNode[] parentNodes;
+	Stack!(ASTNode) parentNodes;
 	_iobuf *outfile;
 	
 	void addNode(ASTNode node, string label, string shape = "oval") {
@@ -15,12 +18,11 @@ class DotGen: ASTNodeVisitor {
 		
 		if(parentNodes.length > 0) {
 			fwritefln(outfile, "%d -> %d;", 
-				parentNodes[parentNodes.length - 1].id, 
+				parentNodes.peek.id, 
 				node.id);
 		}
 		
-		parentNodes.length = parentNodes.length + 1;
-		parentNodes[parentNodes.length - 1] = node;
+		parentNodes.push(node);
 	}
 	
 	public:
@@ -29,7 +31,10 @@ class DotGen: ASTNodeVisitor {
 		this.outfile = outfile;
 	}
 	
-	void visit(ASTRootNode rootNode) {
+	void visit(Statement stmt) {
+	}
+	
+	void visit(ASTNode rootNode) {
 		fwritefln(outfile, "digraph G {");
 		addNode(rootNode, "Program", "box");
 	}
@@ -69,14 +74,11 @@ class DotGen: ASTNodeVisitor {
 		addNode(externNode, "Extern", "box");
 	}
 	
-	void visit(ASTNode node) {
-	}
-	
 	void unvisit(ASTNode node) {
 		if(parentNodes.length == 1) {
 			fwritefln(outfile, "}");
-		} else if(parentNodes[parentNodes.length - 1] == node) {
-			parentNodes.length = parentNodes.length - 1;
+		} else if(parentNodes.peek == node) {
+			parentNodes.pop();
 		}
 	}
 }

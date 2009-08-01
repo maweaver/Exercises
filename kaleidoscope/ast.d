@@ -4,9 +4,12 @@ import std.c.stdio;
 import std.stdio;
 import std.string;
 
+import stack;
+import visitor;
+
 interface ASTNodeVisitor {
 	
-	void visit(ASTRootNode rootNode);
+	void visit(Statement stmt);
 	void visit(Number number);
 	void visit(Variable variable);
 	void visit(BinaryExpression binaryExpression);
@@ -21,47 +24,69 @@ interface ASTNodeVisitor {
 	void unvisit(ASTNode node);
 }
 
-class ASTNode {
-	public:
-	int id;
-	
-	this(int id) {
-		this.id = id;
-	}
-	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		visitor.unvisit(this);
-	}
+enum TraversalOrder {
+
+	preorder,
+	inorder,
+	postorder
 }
 
-class ASTRootNode: ASTNode {
+class ASTNode {
 	public:
-	Statement[] statements;
 	
-	this(int id, Statement[] statements) {
-		super(id);
-		this.statements = statements;
+	int id;
+	ASTNode left;
+	ASTNode right;
+	
+	this(int id, ASTNode left = null, ASTNode right = null) {
+		this.id = id;
+		this.left = left;
+		this.right = right;
 	}
 	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		foreach(s; statements) {
-			s.visit(visitor);
+	void accept(TraversalOrder order, ASTNodeVisitor v) {
+		if(order == TraversalOrder.preorder) {
+			v.visit(this);
 		}
-		visitor.unvisit(this);
+		if(left) {
+			left.accept(order, v);
+		}
+		if(order == TraversalOrder.inorder) {
+			v.visit(this);
+		}
+		if(right) {
+			right.accept(order, v);
+		}
+		if(order == TraversalOrder.postorder) {
+			v.visit(this);
+		}
+		v.unvisit(this);
 	}
 }
 
 class Expression: ASTNode {
-	this(int id) {
-		super(id);
+	this(int id, ASTNode left = null, ASTNode right = null) {
+		super(id, left, right);
 	}
+	
 }
 
 class Statement: ASTNode {
-	this(int id) {
-		super(id);
+	public:
+	
+	ASTNode statement() {
+		return left;
+	}
+
+	Statement nextStatement() {
+		return cast(Statement) right;
+	}
+	void nextStatement(Statement statement) {
+		right = statement;
+	}
+		
+	this(int id, ASTNode statement, Statement nextStatement = null) {
+		super(id, statement, nextStatement);
 	}
 }
 
@@ -86,11 +111,6 @@ class Number: Expression {
 		super(id);
 		this.val = val;
 	}
-
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		visitor.unvisit(this);
-	}
 }
 
 class Variable: Expression {
@@ -102,32 +122,24 @@ class Variable: Expression {
 		super(id);
 		this.name = name;
 	}
-
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		visitor.unvisit(this);
-	}
 }
 
 class BinaryExpression: Expression {
 	public:
 	
 	char operation;
-	Expression lhs;
-	Expression rhs;
 	
-	this(int id, char operation, Expression lhs, Expression rhs) {
-		super(id);
-		this.operation = operation;
-		this.lhs = lhs;
-		this.rhs = rhs;
+	Expression lhs() {
+		return cast(Expression) left;
 	}
 	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		lhs.visit(visitor);
-		rhs.visit(visitor);
-		visitor.unvisit(this);
+	Expression rhs() {
+		return cast(Expression) right;
+	}
+	
+	this(int id, char operation, Expression left, Expression right) {
+		super(id, left, right);
+		this.operation = operation;
 	}
 }
 
@@ -135,7 +147,10 @@ class Call: Expression {
 	public:
 	
 	string callee;
-	CallArg args;
+	
+	CallArg args() {
+		return cast(CallArg) left;
+	}
 	
 	CallArg[] flatArgs() {
 		CallArg[] ret;
@@ -151,52 +166,43 @@ class Call: Expression {
 	this(int id, string callee) {
 		super(id);
 		this.callee = callee;
-		this.args = null;
 	}
 	
 	this(int id, string callee, CallArg args) {
-		super(id);
+		super(id, args);
 		this.callee = callee;
-		this.args = args;
-	}
-	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		foreach(arg; flatArgs) {
-			arg.visit(visitor);
-		}
-		visitor.unvisit(this);
 	}
 }
 
 class CallArg: Expression {
 	public:
 	
-	Expression value;
-	CallArg nextArg;
+	Expression value() {
+		return cast(Expression) left;
+	}
+	
+	CallArg nextArg() {
+		return cast(CallArg) right;
+	}
 	
 	this(int id, Expression value) {
-		super(id);
-		this.value = value;
-		this.nextArg = null;
+		super(id, value);
 	}
 	
 	this(int id, Expression value, CallArg nextArg) {
-		super(id);
-		this.value = value;
-		this.nextArg = nextArg;
-	}	
-	
-	void visit(ASTNodeVisitor visitor) {
-		value.visit(visitor);
+		super(id, value, nextArg);
 	}
+	
+	mixin Acceptor!(value, nextArg, ASTNodeVisitor);
 }
 
 class Prototype: ASTNode {
 	public:
 	
 	string name;
-	PrototypeArg args;
+	PrototypeArg args() {
+		return cast(PrototypeArg) left;
+	}
 	
 	PrototypeArg[] flatArgs() {
 		PrototypeArg[] ret;
@@ -212,21 +218,11 @@ class Prototype: ASTNode {
 	this(int id, string name) {
 		super(id);
 		this.name = name;
-		this.args = null;
 	}
 	
 	this(int id, string name, PrototypeArg args) {
-		super(id);
+		super(id, args);
 		this.name = name;
-		this.args = args;
-	}
-	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		foreach(arg; flatArgs) {
-			arg.visit(visitor);
-		}
-		visitor.unvisit(this);
 	}
 }
 
@@ -234,73 +230,64 @@ class PrototypeArg: ASTNode {
 	public:
 	
 	string name;
-	PrototypeArg nextArg;
+	PrototypeArg nextArg() {
+		return cast(PrototypeArg) left;
+	}
 	
 	this(int id, string name) {
 		super(id);
 		this.name = name;
-		this.nextArg = null;
 	}
 	
 	this(int id, string name, PrototypeArg nextArg) {
-		super(id);
+		super(id, nextArg);
 		this.name = name;
-		this.nextArg = nextArg;
-	}
-	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		visitor.unvisit(this);
 	}
 }
 
-class Function: Statement {
+class Function: ASTNode {
 	public:
-	Prototype prototype;
-	Expression functionBody;
+	
+	Prototype prototype() {
+		return cast(Prototype) left;
+	}
+	
+	Expression functionBody() {
+		return cast(Expression) right;
+	}
 	
 	this(int id, Prototype prototype, Expression functionBody) {
-		super(id);
-		this.prototype = prototype;
-		this.functionBody = functionBody;
-	}
-	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		prototype.visit(visitor);
-		functionBody.visit(visitor);
-		visitor.unvisit(this);
+		super(id, prototype, functionBody);
 	}
 }
 
-class Extern: Statement {
+class Extern: ASTNode {
 	public:
-	Prototype prototype;
 	
-	this(int id, Prototype prototype) {
-		super(id);
-		this.prototype = prototype;
+	Prototype prototype() {
+		return cast(Prototype) left;
 	}
 	
-	void visit(ASTNodeVisitor visitor) {
-		visitor.visit(this);
-		prototype.visit(visitor);
-		visitor.unvisit(this);
-	}	
+	this(int id, Prototype prototype) {
+		super(id, prototype);
+	}
 }
 
 ASTNode[] nodes;
-Statement[] statements;
+Stack!(Statement) statements;
 int currentId;
 
-int addNode(ASTNode node) {
+int addNode(ASTNode node, bool isStatement = false) {
 	nodes.length = cast(int) fmax(nodes.length, node.id + 1);
 	nodes[node.id] = node;
 	
-	Statement statementNode = cast(Statement) node;
-	if(statementNode) {
-		statements.length = statements.length + 1;
-		statements[statements.length - 1] = statementNode;
+	if(isStatement) {
+		Statement statementNode = new Statement(nextId(), node);
+		writefln("Creating statement %d", statementNode.id);
+		if(statements.length > 0) {
+			statements.peek().nextStatement = statementNode;
+		}
+		statements.push(statementNode);
 	}
 	
 	return node.id;
@@ -312,10 +299,6 @@ string getValue(int identifier) {
 
 int nextId() {
 	return currentId++;
-}
-
-ASTRootNode getRootNode() {
-	return new ASTRootNode(nextId(), statements);
 }
 
 extern (C) {
@@ -371,10 +354,10 @@ extern (C) {
 	}
 	
 	int ast_function(int prototype, int expression) {
-		return addNode(new Function(nextId(), cast(Prototype) nodes[prototype], cast(Expression) nodes[expression]));
+		return addNode(new Function(nextId(), cast(Prototype) nodes[prototype], cast(Expression) nodes[expression]), true);
 	}
 	
 	int ast_extern(int prototype) {
-		return addNode(new Extern(nextId(), cast(Prototype) nodes[prototype]));
+		return addNode(new Extern(nextId(), cast(Prototype) nodes[prototype]), true);
 	}
 }

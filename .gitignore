@@ -3,3 +3,6 @@ output
 *.cmi
 *.cmx
 *.o
+.lock-wscript
+build
+lexer.c

@@ -6,6 +6,10 @@
 
 char *endp;
 extern char *yytext;
+
+int yylex();
+void yyerror(char *s);
+
 %}
 
 %token TOKEN_EOF
@@ -81,7 +85,7 @@ expression : expression '+' expression
 
 %%
 
-yyerror(char *s) {
+void yyerror(char *s) {
   fprintf(stderr, "%s\n", s);
 }
 
