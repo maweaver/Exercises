@@ -18,6 +18,7 @@ interface ASTNodeVisitor {
 	void visit(Prototype prototype);
 	void visit(PrototypeArg prototypeArg);
 	void visit(Extern externNode);
+	void visit(Output outputNode);
 	void visit(ASTNode node);
 	
 	void unvisit(ASTNode node);
@@ -293,6 +294,20 @@ class Extern: ASTNode {
 	mixin Accept;
 }
 
+class Output: ASTNode {
+	public:
+	
+	Expression expression() {
+		return cast(Expression) left;
+	}
+	
+	this(int id, Expression expression) {
+		super(id, expression);
+	}
+	
+	mixin Accept;
+}
+
 ASTNode[] nodes;
 Stack!(Statement) statements;
 int currentId;
@@ -382,5 +397,9 @@ extern (C) {
 	
 	int ast_extern(int prototype) {
 		return addNode(new Extern(nextId(), cast(Prototype) nodes[prototype]), true);
+	}
+	
+	int ast_output(int expression) {
+		return addNode(new Output(nextId(), cast(Expression) nodes[expression]), true);
 	}
 }

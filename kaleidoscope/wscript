@@ -35,7 +35,7 @@ def configure(conf):
 	conf.env.append_value('CCFLAGS', '-I%s' % os.path.abspath(srcdir))
 	conf.env.append_value('CCFLAGS', '-m32')
 	conf.env.append_value('BISONFLAGS', '-d')
-	add_libs(conf.env, [ 'm', 'LLVMCore', 'LLVMSupport', 'LLVMSystem', 'stdc++', 'lexparse' ])
+	add_libs(conf.env, [ 'm', 'LLVMCore', 'LLVMSupport', 'LLVMSystem', 'LLVMBitWriter', 'stdc++', 'lexparse' ])
 
 def build(bld):
 	bld.new_task_gen(

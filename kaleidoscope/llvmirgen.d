@@ -11,13 +11,20 @@ typedef void *LLVMTypeRef;
 typedef void *LLVMBasicBlockRef;
 
 int LLVMExternalLinkage = 0;
+int LLVMInternalLinkage = 4;
 
 extern(C) {
 	LLVMModuleRef LLVMModuleCreateWithName(char *);
 	void LLVMDumpModule(LLVMModuleRef);
 	
+	LLVMTypeRef LLVMArrayType(LLVMTypeRef, uint);
+	LLVMTypeRef LLVMInt8Type();
+	LLVMTypeRef LLVMInt32Type();
+	LLVMTypeRef LLVMInt64Type();
 	LLVMTypeRef LLVMDoubleType();
 	LLVMTypeRef LLVMFunctionType(LLVMTypeRef, LLVMTypeRef *, uint, int);
+	LLVMTypeRef LLVMPointerType(LLVMTypeRef, uint);
+	LLVMTypeRef LLVMTypeOf(LLVMValueRef);
 	
 	LLVMBuilderRef LLVMCreateBuilder();
 	void LLVMPositionBuilderAtEnd(LLVMBuilderRef, LLVMBasicBlockRef);
@@ -26,8 +33,17 @@ extern(C) {
 	LLVMValueRef LLVMBuildMul(LLVMBuilderRef, LLVMValueRef, LLVMValueRef, char *);
 	LLVMValueRef LLVMBuildFDiv(LLVMBuilderRef, LLVMValueRef, LLVMValueRef, char *);
 	LLVMValueRef LLVMBuildCall(LLVMBuilderRef, LLVMValueRef, LLVMValueRef*, uint, char *);
+	LLVMValueRef LLVMBuildGEP(LLVMBuilderRef, LLVMValueRef, LLVMValueRef*, uint, char *);
+	LLVMValueRef LLVMBuildLoad(LLVMBuilderRef, LLVMValueRef, char *);
 	
+	LLVMValueRef LLVMAddGlobal(LLVMModuleRef, LLVMTypeRef, char *);
+	void LLVMSetInitializer(LLVMValueRef, LLVMValueRef);
+	void LLVMSetGlobalConstant(LLVMValueRef, int);
+	
+	LLVMValueRef LLVMConstArray(LLVMTypeRef, LLVMValueRef *, uint);
+	LLVMValueRef LLVMConstInt(LLVMTypeRef, ulong, int);
 	LLVMValueRef LLVMConstReal(LLVMTypeRef, double);
+	LLVMValueRef LLVMConstString(char *, uint, int);
 	LLVMValueRef LLVMAddFunction(LLVMModuleRef, char *, LLVMTypeRef);
 	LLVMValueRef LLVMGetParam(LLVMValueRef, uint);
 	LLVMValueRef LLVMGetNamedFunction(LLVMModuleRef, char *);
@@ -35,6 +51,8 @@ extern(C) {
 	LLVMBasicBlockRef LLVMValueAsBasicBlock(LLVMValueRef);
 	LLVMValueRef LLVMBuildRet(LLVMBuilderRef, LLVMValueRef);
 	void LLVMSetLinkage(LLVMValueRef, int);
+	
+	int LLVMWriteBitcodeToFile(LLVMModuleRef, char *);
 	
 	void LLVMDisposeMessage(char *);
 }
@@ -58,9 +76,15 @@ class LlvmIrGen: ASTNodeVisitor {
 	LLVMModuleRef moduleRef;
 	LLVMBuilderRef builderRef;
 	LLVMTypeRef doubleType;
+	LLVMTypeRef intType;
+	LLVMTypeRef charType;
+	LLVMTypeRef charPtrType;
+	LLVMTypeRef charPtrPtrType;
 	
+	LLVMValueRef printf;
+	LLVMValueRef printfFormat;
+
 	FunctionContext fnContext;
-	
 	Stack!(LLVMValueRef) expressions;
 	
 	LLVMTypeRef getFunctionType(int numParams) {
@@ -83,16 +107,36 @@ class LlvmIrGen: ASTNodeVisitor {
 	
 	public:
 	
-	LLVMModuleRef generateModule(string name, Statement root) {
+	void outputModule(string name, string filename, Statement root) {
 		moduleRef = LLVMModuleCreateWithName(toStringz(name));
 		builderRef = LLVMCreateBuilder();
 		doubleType = LLVMDoubleType();
+		intType = LLVMInt32Type();
+		charType = LLVMInt8Type();
+		charPtrType = LLVMPointerType(charType, 0);
+		charPtrPtrType = LLVMPointerType(charPtrType, 0);
 		expressions = new Stack!(LLVMValueRef)();
+
+		LLVMValueRef[4] formatChars;
+		formatChars[0] = LLVMConstInt(charType, '%', 0);
+		formatChars[1] = LLVMConstInt(charType, 'f', 0);
+		formatChars[2] = LLVMConstInt(charType, '\n', 0);
+		formatChars[3] = LLVMConstInt(charType, '\0', 0);
+		auto printfFormatVal = LLVMConstArray(charType, &formatChars[0], 4);
+		printfFormat = LLVMAddGlobal(moduleRef, LLVMArrayType(charType, 4), toStringz("printfFormat"));
+		LLVMSetInitializer(printfFormat, printfFormatVal);
+		LLVMSetLinkage(printfFormat, LLVMInternalLinkage);
+		LLVMSetGlobalConstant(printfFormat, 1);
+		
+		LLVMTypeRef[1] printfArgs;
+		printfArgs[0] = charPtrType;
+		auto printfType = LLVMFunctionType(intType, &printfArgs[0], 1, 1);
+		printf = LLVMAddFunction(moduleRef, toStringz("printf"), printfType);
+		LLVMSetLinkage(printf, LLVMExternalLinkage);
 		
 		root.accept(TraversalOrder.preorder, this);
 		
-		LLVMDumpModule(moduleRef);
-		return moduleRef;
+		LLVMWriteBitcodeToFile(moduleRef, toStringz(filename));
 	}
 	
 	void visit(ASTNode rootNode) {
@@ -126,6 +170,18 @@ class LlvmIrGen: ASTNodeVisitor {
 		resetFunctionContext(FunctionType.external);
 	}
 	
+	void visit(Output outputNode) {
+		resetFunctionContext(FunctionType.defined);
+		LLVMTypeRef[2] mainArgTypes;
+		mainArgTypes[0] = intType;
+		mainArgTypes[1] = charPtrPtrType;
+		auto mainType = LLVMFunctionType(intType, &mainArgTypes[0], 2, false);
+		fnContext.fn = LLVMAddFunction(moduleRef, toStringz("main"), mainType);
+		LLVMSetLinkage(fnContext.fn, LLVMExternalLinkage);
+		fnContext.block = LLVMAppendBasicBlock(fnContext.fn, "entry");
+		LLVMPositionBuilderAtEnd(builderRef, fnContext.block);
+	}
+	
 	void visit(Prototype prototype) {
 		auto preExisting = LLVMGetNamedFunction(moduleRef, toStringz(prototype.name));
 		if(preExisting) {
@@ -153,7 +209,6 @@ class LlvmIrGen: ASTNodeVisitor {
 	void unvisit(ASTNode node) {
 		auto binaryExpression = cast(BinaryExpression) node;
 		if(binaryExpression) {
-			writefln("Looking for 2 args from %d expressions", expressions.length);
 			LLVMValueRef rhs = expressions.pop();
 			LLVMValueRef lhs = expressions.pop();
 		
@@ -182,15 +237,28 @@ class LlvmIrGen: ASTNodeVisitor {
 			auto callArgs = callNode.flatArgs;
 			LLVMValueRef[] args;
 			args.length = callArgs.length;
-			writefln("Looking for %d args from %d expressions", callArgs.length, expressions.length);
 			for(int i = callArgs.length - 1; i >= 0; i--) {
 				args[i] = expressions.pop();
 			}
 			if(args.length > 0) {
-				expressions.push(LLVMBuildCall(builderRef, fn, &args[0], args.length, "call"));
+				expressions.push(LLVMBuildCall(builderRef, fn, &args[0], args.length, toStringz("call")));
 			} else {
-				expressions.push(LLVMBuildCall(builderRef, fn, null, 0, "call"));
+				expressions.push(LLVMBuildCall(builderRef, fn, null, 0, toStringz("call")));
 			}
+		}
+		
+		auto outputNode = cast(Output) node;
+		if(outputNode) {
+			// auto printfArg = LLVMBuildLoad(builderRef, printfFormat, "printfArg");
+			LLVMValueRef[2] gepOffsets;
+			gepOffsets[0] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+			gepOffsets[1] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+			LLVMValueRef formatArg = LLVMBuildGEP(builderRef, printfFormat, &gepOffsets[0], 2, toStringz("gep"));
+			LLVMValueRef[2] args;
+			args[0] = formatArg;
+			args[1] = expressions.pop();
+			LLVMBuildCall(builderRef, printf, &args[0], 2, "printoutput");
+			LLVMBuildRet(builderRef, LLVMConstInt(intType, 1, 0));
 		}
 	}
 }

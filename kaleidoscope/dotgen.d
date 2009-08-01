@@ -83,6 +83,10 @@ class DotGen: ASTNodeVisitor {
 		addNode(externNode, "Extern", "box");
 	}
 	
+	void visit(Output outputNode) {
+		addNode(outputNode, "Output", "box");
+	}
+	
 	void unvisit(ASTNode node) {
 		if(parentNodes.peek == node) {
 			parentNodes.pop();

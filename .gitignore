@@ -8,3 +8,5 @@ build
 lexer.c
 ast.dot
 ast.png
+a.out
+*.i*

@@ -19,6 +19,7 @@ COMMENT       #.*
 {NUMBER}      return TOKEN_NUMBER;
 def           return TOKEN_DEF;
 extern        return TOKEN_EXTERN;
+output        return TOKEN_OUTPUT;
 {IDENTIFIER}  identifier_str = yytext; return TOKEN_IDENTIFIER;
 {SYMBOL}      return *yytext;
 <<EOF>>       return TOKEN_EOF;

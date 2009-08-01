@@ -17,3 +17,5 @@ int ast_prototype_arg(int identifier, int nextArg);
 int ast_function(int prototype, int expression);
 
 int ast_extern(int prototype);
+
+int ast_output(int expression);

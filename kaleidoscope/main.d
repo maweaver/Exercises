@@ -18,5 +18,5 @@ void main() {
 	fclose(dotFile);
 	
 	auto llvmIrGen = new LlvmIrGen();
-	auto moduleRef = llvmIrGen.generateModule("kaleidoscope", rootNode);
+	llvmIrGen.outputModule("kaleidoscope", "output.i", rootNode);
 }

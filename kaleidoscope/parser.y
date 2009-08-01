@@ -17,6 +17,7 @@ void yyerror(char *s);
 %token TOKEN_EXTERN
 %token TOKEN_IDENTIFIER
 %token TOKEN_NUMBER
+%token TOKEN_OUTPUT
 
 %start statement
 
@@ -26,10 +27,9 @@ void yyerror(char *s);
 
 %%
 
-statement : extern
-          | extern statement
-          | function
+statement : extern statement
           | function statement
+          | output
           ;
 
 identifier: TOKEN_IDENTIFIER
@@ -40,7 +40,10 @@ extern : TOKEN_EXTERN prototype
        ;
 
 function : TOKEN_DEF prototype expression
-           { $$ = ast_function($2, $3) }
+           { $$ = ast_function($2, $3); }
+
+output : TOKEN_OUTPUT expression
+         { $$ = ast_output($2); }
 
 prototype : identifier '(' ')'
             { $$ = ast_prototype($1, -1); }
