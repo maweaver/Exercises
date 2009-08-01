@@ -17,6 +17,6 @@ void main() {
 	dg.generateDot(rootNode);
 	fclose(dotFile);
 	
-//	auto llvmIrGen = new LlvmIrGen();
-//	auto moduleRef = llvmIrGen.generateModule("kaleidoscope", rootNode);
+	auto llvmIrGen = new LlvmIrGen();
+	auto moduleRef = llvmIrGen.generateModule("kaleidoscope", rootNode);
 }
