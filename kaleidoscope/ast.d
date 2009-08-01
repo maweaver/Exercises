@@ -5,7 +5,6 @@ import std.stdio;
 import std.string;
 
 import stack;
-import visitor;
 
 interface ASTNodeVisitor {
 	
@@ -192,8 +191,6 @@ class CallArg: Expression {
 	this(int id, Expression value, CallArg nextArg) {
 		super(id, value, nextArg);
 	}
-	
-	mixin Acceptor!(value, nextArg, ASTNodeVisitor);
 }
 
 class Prototype: ASTNode {

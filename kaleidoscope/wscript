@@ -48,5 +48,5 @@ def build(bld):
 	bld.new_task_gen(
 		features = 'cc d dprogram',
 		ccflags = [ '-m32' ],
-		source = 'ast.d bintree.d dotgen.d main.d stack.d llvmirgen.d',
+		source = 'ast.d dotgen.d main.d stack.d llvmirgen.d',
 		target = 'kaleidoscope')
