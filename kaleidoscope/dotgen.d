@@ -8,7 +8,8 @@ import std.string;
 class DotGen: ASTNodeVisitor {
 	
 	private:
-	
+
+	ASTNode programNode;
 	Stack!(ASTNode) parentNodes;
 	_iobuf *outfile;
 	
@@ -29,14 +30,22 @@ class DotGen: ASTNodeVisitor {
 	
 	this(_iobuf *outfile) {
 		this.outfile = outfile;
+		this.parentNodes = new Stack!(ASTNode)();
+	}
+	
+	void generateDot(Statement stmt) {
+		fwritefln(outfile, "digraph G {");
+		programNode = new ASTNode(ast.nextId());
+		addNode(programNode, "Program", "box");
+		parentNodes.push(programNode);
+		stmt.accept(TraversalOrder.preorder, this);
+		fwritefln(outfile, "}");
 	}
 	
 	void visit(Statement stmt) {
 	}
 	
 	void visit(ASTNode rootNode) {
-		fwritefln(outfile, "digraph G {");
-		addNode(rootNode, "Program", "box");
 	}
 	
 	void visit(Number number) {
@@ -75,9 +84,7 @@ class DotGen: ASTNodeVisitor {
 	}
 	
 	void unvisit(ASTNode node) {
-		if(parentNodes.length == 1) {
-			fwritefln(outfile, "}");
-		} else if(parentNodes.peek == node) {
+		if(parentNodes.peek == node) {
 			parentNodes.pop();
 		}
 	}

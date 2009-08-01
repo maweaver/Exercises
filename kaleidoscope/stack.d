@@ -1,3 +1,5 @@
+import std.stdio;
+
 class Stack(T) {
 	
 	private:

@@ -30,19 +30,7 @@ enum TraversalOrder {
 	postorder
 }
 
-class ASTNode {
-	public:
-	
-	int id;
-	ASTNode left;
-	ASTNode right;
-	
-	this(int id, ASTNode left = null, ASTNode right = null) {
-		this.id = id;
-		this.left = left;
-		this.right = right;
-	}
-	
+template Accept() {
 	void accept(TraversalOrder order, ASTNodeVisitor v) {
 		if(order == TraversalOrder.preorder) {
 			v.visit(this);
@@ -61,13 +49,28 @@ class ASTNode {
 		}
 		v.unvisit(this);
 	}
+}	
+
+class ASTNode {
+	public:
+	
+	int id;
+	ASTNode left;
+	ASTNode right;
+	
+	this(int id, ASTNode left = null, ASTNode right = null) {
+		this.id = id;
+		this.left = left;
+		this.right = right;
+	}
+	
+	mixin Accept;
 }
 
 class Expression: ASTNode {
 	this(int id, ASTNode left = null, ASTNode right = null) {
 		super(id, left, right);
 	}
-	
 }
 
 class Statement: ASTNode {
@@ -87,6 +90,8 @@ class Statement: ASTNode {
 	this(int id, ASTNode statement, Statement nextStatement = null) {
 		super(id, statement, nextStatement);
 	}
+	
+	mixin Accept;
 }
 
 class Identifier: Expression {
@@ -110,6 +115,8 @@ class Number: Expression {
 		super(id);
 		this.val = val;
 	}
+	
+	mixin Accept;
 }
 
 class Variable: Expression {
@@ -121,6 +128,8 @@ class Variable: Expression {
 		super(id);
 		this.name = name;
 	}
+	
+	mixin Accept;
 }
 
 class BinaryExpression: Expression {
@@ -140,6 +149,8 @@ class BinaryExpression: Expression {
 		super(id, left, right);
 		this.operation = operation;
 	}
+	
+	mixin Accept;
 }
 
 class Call: Expression {
@@ -171,6 +182,8 @@ class Call: Expression {
 		super(id, args);
 		this.callee = callee;
 	}
+	
+	mixin Accept;
 }
 
 class CallArg: Expression {
@@ -191,6 +204,8 @@ class CallArg: Expression {
 	this(int id, Expression value, CallArg nextArg) {
 		super(id, value, nextArg);
 	}
+	
+	mixin Accept;
 }
 
 class Prototype: ASTNode {
@@ -221,6 +236,8 @@ class Prototype: ASTNode {
 		super(id, args);
 		this.name = name;
 	}
+	
+	mixin Accept;
 }
 
 class PrototypeArg: ASTNode {
@@ -240,6 +257,8 @@ class PrototypeArg: ASTNode {
 		super(id, nextArg);
 		this.name = name;
 	}
+	
+	mixin Accept;
 }
 
 class Function: ASTNode {
@@ -256,6 +275,8 @@ class Function: ASTNode {
 	this(int id, Prototype prototype, Expression functionBody) {
 		super(id, prototype, functionBody);
 	}
+	
+	mixin Accept;
 }
 
 class Extern: ASTNode {
@@ -268,6 +289,8 @@ class Extern: ASTNode {
 	this(int id, Prototype prototype) {
 		super(id, prototype);
 	}
+	
+	mixin Accept;
 }
 
 ASTNode[] nodes;
@@ -278,9 +301,12 @@ int addNode(ASTNode node, bool isStatement = false) {
 	nodes.length = cast(int) fmax(nodes.length, node.id + 1);
 	nodes[node.id] = node;
 	
+	if(!statements) {
+		statements = new Stack!(Statement)();
+	}
+	
 	if(isStatement) {
 		Statement statementNode = new Statement(nextId(), node);
-		writefln("Creating statement %d", statementNode.id);
 		if(statements.length > 0) {
 			statements.peek().nextStatement = statementNode;
 		}

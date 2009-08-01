@@ -6,3 +6,5 @@ output
 .lock-wscript
 build
 lexer.c
+ast.dot
+ast.png
