@@ -38,58 +38,111 @@ class DotGen: ASTNodeVisitor {
 		programNode = new ASTNode(ast.nextId());
 		addNode(programNode, "Program", "box");
 		parentNodes.push(programNode);
-		stmt.accept(TraversalOrder.preorder, this);
+		stmt.accept(this);
 		fwritefln(outfile, "}");
 	}
 	
-	void visit(Statement stmt) {
-	}
-	
-	void visit(ASTNode rootNode) {
-	}
-	
-	void visit(Number number) {
-		addNode(number, std.string.toString(number.val));
-	}
-	
-	void visit(Variable variable) {
-		addNode(variable, variable.name);
-	}
-	
-	void visit(BinaryExpression binaryExpression) {
+	void previsit(BinaryExpression binaryExpression) {
 		addNode(binaryExpression, std.string.toString(binaryExpression.operation), "circle");
 	}
 	
-	void visit(Call call) {
+	void postvisit(BinaryExpression n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(BooleanExpression booleanExpression) {
+		addNode(booleanExpression, std.string.toString(booleanExpression.operation), "circle");
+	}
+	
+	void postvisit(BooleanExpression n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Call call) {
 		addNode(call, call.callee, "box");
 	}
 	
-	void visit(CallArg callArg) {
+	void postvisit(Call n) {
+		parentNodes.pop();
 	}
 	
-	void visit(Function functionNode) {
-		addNode(functionNode, "Function", "box");
-	}
-	
-	void visit(Prototype prototype) {
-		addNode(prototype, prototype.name);
-	}
-	
-	void visit(PrototypeArg prototypeArg) {
-		addNode(prototypeArg, prototypeArg.name);
-	}
-	
-	void visit(Extern externNode) {
+	void previsit(Extern externNode) {
 		addNode(externNode, "Extern", "box");
 	}
 	
-	void visit(Output outputNode) {
+	void postvisit(Extern n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Function functionNode) {
+		addNode(functionNode, "Function", "box");
+	}
+	
+	void postvisit(Function n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(If ifNode) {
+		addNode(ifNode, "If", "box");
+	}
+	
+	void postvisit(If n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Input inputNode) {
+		addNode(inputNode, "Input", "box");
+	}
+	
+	void postvisit(Input n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(ThenElse thenElseNode) {
+		addNode(thenElseNode, "Then/Else", "box");
+	}
+	
+	void postvisit(ThenElse n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Number number) {
+		addNode(number, std.string.toString(number.val));
+	}
+	
+	void postvisit(Number n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Output outputNode) {
 		addNode(outputNode, "Output", "box");
 	}
 	
-	void unvisit(ASTNode node) {
-		if(parentNodes.peek == node) {
-			parentNodes.pop();
-		}
+	void postvisit(Output n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Prototype prototype) {
+		addNode(prototype, prototype.name);
+	}
+	
+	void postvisit(Prototype n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(PrototypeArg prototypeArg) {
+		addNode(prototypeArg, prototypeArg.name);
+	}
+	
+	void postvisit(PrototypeArg n) {
+		parentNodes.pop();
+	}
+	
+	void previsit(Variable variable) {
+		addNode(variable, variable.name);
+	}
+	
+	void postvisit(Variable n) {
+		parentNodes.pop();
 	}
 }

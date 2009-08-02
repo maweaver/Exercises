@@ -13,6 +13,10 @@ typedef void *LLVMBasicBlockRef;
 int LLVMExternalLinkage = 0;
 int LLVMInternalLinkage = 4;
 
+int LLVMRealOLT = 4;
+int LLVMRealOEQ = 1;
+int LLVMRealOGT = 2;
+
 extern(C) {
 	LLVMModuleRef LLVMModuleCreateWithName(char *);
 	void LLVMDumpModule(LLVMModuleRef);
@@ -35,8 +39,14 @@ extern(C) {
 	LLVMValueRef LLVMBuildCall(LLVMBuilderRef, LLVMValueRef, LLVMValueRef*, uint, char *);
 	LLVMValueRef LLVMBuildGEP(LLVMBuilderRef, LLVMValueRef, LLVMValueRef*, uint, char *);
 	LLVMValueRef LLVMBuildLoad(LLVMBuilderRef, LLVMValueRef, char *);
+	LLVMValueRef LLVMBuildFCmp(LLVMBuilderRef, int, LLVMValueRef, LLVMValueRef, char *);
+	LLVMValueRef LLVMBuildCondBr(LLVMBuilderRef, LLVMValueRef, LLVMBasicBlockRef, LLVMBasicBlockRef);
+	LLVMValueRef LLVMBuildBr(LLVMBuilderRef, LLVMBasicBlockRef);
+	LLVMValueRef LLVMBuildPhi(LLVMBuilderRef, LLVMTypeRef, char *);
+	LLVMValueRef LLVMBuildAlloca(LLVMBuilderRef, LLVMTypeRef, char *);
 	
 	LLVMValueRef LLVMAddGlobal(LLVMModuleRef, LLVMTypeRef, char *);
+	void LLVMAddIncoming(LLVMValueRef, LLVMValueRef *, LLVMBasicBlockRef *, uint);
 	void LLVMSetInitializer(LLVMValueRef, LLVMValueRef);
 	void LLVMSetGlobalConstant(LLVMValueRef, int);
 	
@@ -69,23 +79,129 @@ struct FunctionContext {
 	LLVMBasicBlockRef block;
 }
 
+struct IfThenElseContext {
+	LLVMBasicBlockRef thenBlock;
+	LLVMValueRef thenValue;
+	LLVMBasicBlockRef elseBlock;
+	LLVMValueRef elseValue;
+	LLVMBasicBlockRef mergeBlock;
+}
+
 class LlvmIrGen: ASTNodeVisitor {
 	
 	private:
 	
 	LLVMModuleRef moduleRef;
 	LLVMBuilderRef builderRef;
+	
+	LLVMValueRef printf;
+	LLVMValueRef printFormat;
+	LLVMValueRef scanf;
+	LLVMValueRef scanFormat;
+
+	FunctionContext fnContext;
+	IfThenElseContext ifThenElseContext;
+	Stack!(LLVMValueRef) expressions;
+	
 	LLVMTypeRef doubleType;
 	LLVMTypeRef intType;
 	LLVMTypeRef charType;
 	LLVMTypeRef charPtrType;
 	LLVMTypeRef charPtrPtrType;
 	
-	LLVMValueRef printf;
-	LLVMValueRef printfFormat;
+	void initLlvm(string name) {
+		moduleRef = LLVMModuleCreateWithName(toStringz(name));
+		builderRef = LLVMCreateBuilder();
+		doubleType = LLVMDoubleType();
+		intType = LLVMInt32Type();
+		charType = LLVMInt8Type();
+		charPtrType = LLVMPointerType(charType, 0);
+		charPtrPtrType = LLVMPointerType(charPtrType, 0);
+	}
+	
+	void declarePrintf() {
+		LLVMTypeRef[1] printfArgs;
+		printfArgs[0] = charPtrType;
+		auto printfType = LLVMFunctionType(intType, &printfArgs[0], 1, 1);
+		printf = LLVMAddFunction(moduleRef, toStringz("printf"), printfType);
+		LLVMSetLinkage(printf, LLVMExternalLinkage);
+	}
+	
+	void declareScanf() {
+		LLVMTypeRef[1] scanfArgs;
+		scanfArgs[0] = charPtrType;
+		auto scanfType = LLVMFunctionType(intType, &scanfArgs[0], 1, 1);
+		scanf = LLVMAddFunction(moduleRef, toStringz("scanf"), scanfType);
+		LLVMSetLinkage(scanf, LLVMExternalLinkage);
+	}
 
-	FunctionContext fnContext;
-	Stack!(LLVMValueRef) expressions;
+	void declarePrintFormat() {
+		LLVMValueRef[5] formatChars;
+		formatChars[0] = LLVMConstInt(charType, '%', 0);
+		formatChars[1] = LLVMConstInt(charType, 'l', 0);
+		formatChars[2] = LLVMConstInt(charType, 'f', 0);
+		formatChars[3] = LLVMConstInt(charType, '\n', 0);
+		formatChars[4] = LLVMConstInt(charType, '\0', 0);
+		auto formatVal = LLVMConstArray(charType, &formatChars[0], 5);
+		printFormat = LLVMAddGlobal(moduleRef, LLVMArrayType(charType, 5), toStringz("printformat"));
+		LLVMSetInitializer(printFormat, formatVal);
+		LLVMSetLinkage(printFormat, LLVMInternalLinkage);
+		LLVMSetGlobalConstant(printFormat, 1);
+	}
+	
+	void declareScanFormat() {
+		LLVMValueRef[4] formatChars;
+		formatChars[0] = LLVMConstInt(charType, '%', 0);
+		formatChars[1] = LLVMConstInt(charType, 'l', 0);
+		formatChars[2] = LLVMConstInt(charType, 'f', 0);
+		formatChars[3] = LLVMConstInt(charType, '\0', 0);
+		auto formatVal = LLVMConstArray(charType, &formatChars[0], 4);
+		scanFormat = LLVMAddGlobal(moduleRef, LLVMArrayType(charType, 4), toStringz("scanformat"));
+		LLVMSetInitializer(scanFormat, formatVal);
+		LLVMSetLinkage(scanFormat, LLVMInternalLinkage);
+		LLVMSetGlobalConstant(scanFormat, 1);
+	}
+
+	void beginOutput() {
+		LLVMTypeRef[2] mainArgTypes;
+		mainArgTypes[0] = intType;
+		mainArgTypes[1] = charPtrPtrType;
+		auto mainType = LLVMFunctionType(intType, &mainArgTypes[0], 2, false);
+		fnContext.fn = LLVMAddFunction(moduleRef, toStringz("main"), mainType);
+		LLVMSetLinkage(fnContext.fn, LLVMExternalLinkage);
+		fnContext.block = LLVMAppendBasicBlock(fnContext.fn, "entry");
+		LLVMPositionBuilderAtEnd(builderRef, fnContext.block);
+	}
+	
+	void displayOutput(LLVMValueRef value) {
+		LLVMValueRef[2] gepOffsets;
+		gepOffsets[0] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+		gepOffsets[1] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+		LLVMValueRef formatArg = LLVMBuildGEP(builderRef, printFormat, &gepOffsets[0], 2, toStringz("gep"));
+		LLVMValueRef[2] args;
+		args[0] = formatArg;
+		args[1] = value;
+		LLVMBuildCall(builderRef, printf, &args[0], 2, toStringz("printoutput"));
+		LLVMBuildRet(builderRef, LLVMConstInt(intType, 1, 0));
+	}
+	
+	LLVMValueRef retrieveInput() {
+		LLVMValueRef[2] gepOffsets;
+		gepOffsets[0] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+		gepOffsets[1] = LLVMConstInt(LLVMInt64Type(), 0, 0);
+		LLVMValueRef formatArg = LLVMBuildGEP(builderRef, scanFormat, &gepOffsets[0], 2, toStringz("gep"));
+		
+		auto tmp = LLVMBuildAlloca(builderRef, doubleType, toStringz("inputtedDouble"));
+		// auto tmpArg = LLVMBuildGEP(builderRef, tmp, &gepOffsets[0], 1, toStringz("tmpGep"));
+		
+		LLVMValueRef[2] args;
+		args[0] = formatArg;
+		args[1] = tmp;
+		LLVMBuildCall(builderRef, scanf, &args[0], 2, toStringz("scaninput"));
+		
+		return LLVMBuildLoad(builderRef, tmp, toStringz("loadInputResult"));
+	}
+		
 	
 	LLVMTypeRef getFunctionType(int numParams) {
 		LLVMTypeRef[] params;
@@ -108,81 +224,116 @@ class LlvmIrGen: ASTNodeVisitor {
 	public:
 	
 	void outputModule(string name, string filename, Statement root) {
-		moduleRef = LLVMModuleCreateWithName(toStringz(name));
-		builderRef = LLVMCreateBuilder();
-		doubleType = LLVMDoubleType();
-		intType = LLVMInt32Type();
-		charType = LLVMInt8Type();
-		charPtrType = LLVMPointerType(charType, 0);
-		charPtrPtrType = LLVMPointerType(charPtrType, 0);
 		expressions = new Stack!(LLVMValueRef)();
+		initLlvm(name);
+		declarePrintf();
+		declarePrintFormat();
+		declareScanf();
+		declareScanFormat();
 
-		LLVMValueRef[4] formatChars;
-		formatChars[0] = LLVMConstInt(charType, '%', 0);
-		formatChars[1] = LLVMConstInt(charType, 'f', 0);
-		formatChars[2] = LLVMConstInt(charType, '\n', 0);
-		formatChars[3] = LLVMConstInt(charType, '\0', 0);
-		auto printfFormatVal = LLVMConstArray(charType, &formatChars[0], 4);
-		printfFormat = LLVMAddGlobal(moduleRef, LLVMArrayType(charType, 4), toStringz("printfFormat"));
-		LLVMSetInitializer(printfFormat, printfFormatVal);
-		LLVMSetLinkage(printfFormat, LLVMInternalLinkage);
-		LLVMSetGlobalConstant(printfFormat, 1);
-		
-		LLVMTypeRef[1] printfArgs;
-		printfArgs[0] = charPtrType;
-		auto printfType = LLVMFunctionType(intType, &printfArgs[0], 1, 1);
-		printf = LLVMAddFunction(moduleRef, toStringz("printf"), printfType);
-		LLVMSetLinkage(printf, LLVMExternalLinkage);
-		
-		root.accept(TraversalOrder.preorder, this);
+		root.accept(this);
 		
 		LLVMWriteBitcodeToFile(moduleRef, toStringz(filename));
 	}
 	
-	void visit(ASTNode rootNode) {
+	void postvisit(BinaryExpression binaryExpression) {
+		LLVMValueRef rhs = expressions.pop();
+		LLVMValueRef lhs = expressions.pop();
+		
+		LLVMValueRef comboExpression = null;
+		switch(binaryExpression.operation) {
+			case '+': comboExpression = LLVMBuildAdd(builderRef, lhs, rhs, toStringz("addtmp")); break;
+			case '-': comboExpression = LLVMBuildSub(builderRef, lhs, rhs, toStringz("subtmp")); break;
+			case '*': comboExpression = LLVMBuildMul(builderRef, lhs, rhs, toStringz("multmp")); break;
+			case '/': comboExpression = LLVMBuildFDiv(builderRef, lhs, rhs, toStringz("divtmp")); break;
+			default: LLVMDisposeMessage(toStringz("Unexpected operator '" ~ binaryExpression.operation ~ "'")); break;
+		}
+		
+		if(comboExpression) {
+			expressions.push(comboExpression);
+		}
 	}
 	
-	void visit(Statement statement) {
+	void postvisit(BooleanExpression booleanExpression) {
+		LLVMValueRef rhs = expressions.pop();
+		LLVMValueRef lhs = expressions.pop();
+		
+		LLVMValueRef cmpExpression = null;
+		switch(booleanExpression.operation) {
+			case '<': cmpExpression = LLVMBuildFCmp(builderRef, LLVMRealOLT, lhs, rhs, toStringz("lttmp")); break;
+			case '=': cmpExpression = LLVMBuildFCmp(builderRef, LLVMRealOEQ, lhs, rhs, toStringz("eqtmp")); break;
+			case '>': cmpExpression = LLVMBuildFCmp(builderRef, LLVMRealOGT, lhs, rhs, toStringz("gttmp")); break;
+		}
+		
+		if(cmpExpression) {
+			expressions.push(cmpExpression);
+		}
 	}
 	
-	void visit(Number number) {
-		expressions.push(LLVMConstReal(doubleType, number.val));
+	void postvisit(Call callNode) {
+		auto fn = LLVMGetNamedFunction(moduleRef, toStringz(callNode.callee));
+		auto callArgs = callNode.flatArgs;
+		LLVMValueRef[] args;
+		args.length = callArgs.length;
+		for(int i = callArgs.length - 1; i >= 0; i--) {
+			args[i] = expressions.pop();
+		}
+		if(args.length > 0) {
+			expressions.push(LLVMBuildCall(builderRef, fn, &args[0], args.length, toStringz("call")));
+		} else {
+			expressions.push(LLVMBuildCall(builderRef, fn, null, 0, toStringz("call")));
+		}
 	}
 	
-	void visit(Variable variable) {
-		expressions.push(fnContext.params[variable.name]);
-	}
-	
-	void visit(BinaryExpression binaryExpression) {
-	}
-	
-	void visit(Call call) {
-	}
-	
-	void visit(CallArg callArg) {
-	}
-	
-	void visit(Function functionNode) {
-		resetFunctionContext(FunctionType.defined);
-	}
-	
-	void visit(Extern externNode) {
+	void previsit(Extern externNode) {
 		resetFunctionContext(FunctionType.external);
 	}
 	
-	void visit(Output outputNode) {
+	void previsit(Function functionNode) {
 		resetFunctionContext(FunctionType.defined);
-		LLVMTypeRef[2] mainArgTypes;
-		mainArgTypes[0] = intType;
-		mainArgTypes[1] = charPtrPtrType;
-		auto mainType = LLVMFunctionType(intType, &mainArgTypes[0], 2, false);
-		fnContext.fn = LLVMAddFunction(moduleRef, toStringz("main"), mainType);
-		LLVMSetLinkage(fnContext.fn, LLVMExternalLinkage);
-		fnContext.block = LLVMAppendBasicBlock(fnContext.fn, "entry");
-		LLVMPositionBuilderAtEnd(builderRef, fnContext.block);
 	}
 	
-	void visit(Prototype prototype) {
+	void postvisit(Function functionNode) {
+		LLVMBuildRet(builderRef, expressions.pop());
+	}
+	
+	void previsit(If ifNode) {
+		ifThenElseContext.mergeBlock = LLVMAppendBasicBlock(fnContext.fn, toStringz("merge"));
+	}
+	
+	void visit(If ifNode) {
+		ifThenElseContext.thenBlock = LLVMAppendBasicBlock(fnContext.fn, toStringz("then"));
+		ifThenElseContext.elseBlock = LLVMAppendBasicBlock(fnContext.fn, toStringz("else"));
+		
+		LLVMBuildCondBr(builderRef, expressions.pop(), ifThenElseContext.thenBlock, ifThenElseContext.elseBlock);
+	}
+	
+	void postvisit(If ifNode) {
+		fnContext.block = ifThenElseContext.mergeBlock;
+		auto phi = LLVMBuildPhi(builderRef, doubleType, toStringz("phi"));
+		LLVMAddIncoming(phi, &ifThenElseContext.thenValue, &ifThenElseContext.thenBlock, 1);
+		LLVMAddIncoming(phi, &ifThenElseContext.elseValue, &ifThenElseContext.elseBlock, 1);
+		expressions.push(phi);
+	}
+	
+	void visit(Input inputNode) {
+		expressions.push(retrieveInput());
+	}
+	
+	void previsit(Number number) {
+		expressions.push(LLVMConstReal(doubleType, number.val));
+	}
+	
+	void previsit(Output outputNode) {
+		resetFunctionContext(FunctionType.defined);
+		beginOutput();
+	}
+	
+	void postvisit(Output outputNode) {
+		displayOutput(expressions.pop());
+	}
+
+	void previsit(Prototype prototype) {
 		auto preExisting = LLVMGetNamedFunction(moduleRef, toStringz(prototype.name));
 		if(preExisting) {
 			fnContext.fn = preExisting;
@@ -202,63 +353,24 @@ class LlvmIrGen: ASTNodeVisitor {
 			LLVMPositionBuilderAtEnd(builderRef, fnContext.block);
 		}
 	}
-	
-	void visit(PrototypeArg prototypeArg) {
+
+	void previsit(ThenElse thenElseNode) {
+		LLVMPositionBuilderAtEnd(builderRef, ifThenElseContext.thenBlock);
 	}
 	
-	void unvisit(ASTNode node) {
-		auto binaryExpression = cast(BinaryExpression) node;
-		if(binaryExpression) {
-			LLVMValueRef rhs = expressions.pop();
-			LLVMValueRef lhs = expressions.pop();
-		
-			LLVMValueRef comboExpression = null;
-			switch(binaryExpression.operation) {
-				case '+': comboExpression = LLVMBuildAdd(builderRef, lhs, rhs, toStringz("addtmp")); break;
-				case '-': comboExpression = LLVMBuildSub(builderRef, lhs, rhs, toStringz("subtmp")); break;
-				case '*': comboExpression = LLVMBuildMul(builderRef, lhs, rhs, toStringz("multmp")); break;
-				case '/': comboExpression = LLVMBuildFDiv(builderRef, lhs, rhs, toStringz("divtmp")); break;
-				default: LLVMDisposeMessage(toStringz("Unexpected operator '" ~ binaryExpression.operation ~ "'")); break;
-			}
-		
-			if(comboExpression) {
-				expressions.push(comboExpression);
-			}
-		}
-		
-		auto functionNode = cast(Function) node;
-		if(functionNode) {
-			LLVMBuildRet(builderRef, expressions.pop());
-		}
-		
-		auto callNode = cast(Call) node;
-		if(callNode) {
-			auto fn = LLVMGetNamedFunction(moduleRef, toStringz(callNode.callee));
-			auto callArgs = callNode.flatArgs;
-			LLVMValueRef[] args;
-			args.length = callArgs.length;
-			for(int i = callArgs.length - 1; i >= 0; i--) {
-				args[i] = expressions.pop();
-			}
-			if(args.length > 0) {
-				expressions.push(LLVMBuildCall(builderRef, fn, &args[0], args.length, toStringz("call")));
-			} else {
-				expressions.push(LLVMBuildCall(builderRef, fn, null, 0, toStringz("call")));
-			}
-		}
-		
-		auto outputNode = cast(Output) node;
-		if(outputNode) {
-			// auto printfArg = LLVMBuildLoad(builderRef, printfFormat, "printfArg");
-			LLVMValueRef[2] gepOffsets;
-			gepOffsets[0] = LLVMConstInt(LLVMInt64Type(), 0, 0);
-			gepOffsets[1] = LLVMConstInt(LLVMInt64Type(), 0, 0);
-			LLVMValueRef formatArg = LLVMBuildGEP(builderRef, printfFormat, &gepOffsets[0], 2, toStringz("gep"));
-			LLVMValueRef[2] args;
-			args[0] = formatArg;
-			args[1] = expressions.pop();
-			LLVMBuildCall(builderRef, printf, &args[0], 2, "printoutput");
-			LLVMBuildRet(builderRef, LLVMConstInt(intType, 1, 0));
-		}
+	void visit(ThenElse thenElseNode) {
+		LLVMBuildBr(builderRef, ifThenElseContext.mergeBlock);
+		LLVMPositionBuilderAtEnd(builderRef, ifThenElseContext.elseBlock);
+	}
+	
+	void postvisit(ThenElse thenElseNode) {
+		ifThenElseContext.elseValue = expressions.pop();
+		ifThenElseContext.thenValue = expressions.pop();
+		LLVMBuildBr(builderRef, ifThenElseContext.mergeBlock);
+		LLVMPositionBuilderAtEnd(builderRef, ifThenElseContext.mergeBlock);
+	}
+	
+	void previsit(Variable variable) {
+		expressions.push(fnContext.params[variable.name]);
 	}
 }
