@@ -618,16 +618,434 @@
 ;(display (branch-structure (make-branch 1 2)))
 ;(newline)
 
-;;;; b. ;;;;;
+;     |
+;   +---+
+;   |   |
+;  +-+  3
+;  | |
+;  2 |
+;    1
+;  
+; (
+;  (1
+;    (
+;      (1 2) 
+;      (2 1)
+;    )
+;  ) 
+; 	 (1 3)
+; )
 
-(define (total-weight m)
-	(if (pair? (branch-structure m))
-		(+ (total-weight (left-branch m)) (total-weight (right-branch m)))
-		(branch-structure m)))
-
-;(display (total-weight (make-mobile (make-branch 1 2) (make-branch 3 4))))
+(define test-mobile 
+		(make-mobile
+			(make-branch 2
+				(make-mobile 
+					(make-branch 1 2) (make-branch 2 1)))
+			(make-branch 1 3)))
+;(display test-mobile)
 ;(newline)
 
-;;;; c. ;;;;;
+;;;; b. ;;;;
+
+(define (total-weight m)
+	(if (pair? (branch-length m))
+		(+ (total-weight (left-branch m))
+				(total-weight (right-branch m)))
+		(if (pair? (branch-structure m))
+			(+ (total-weight (left-branch (branch-structure m)))
+				(total-weight (right-branch (branch-structure m))))
+			(branch-structure m))))
+
+;(display (total-weight test-mobile))
+;(newline)
+
+;;;; c. ;;;;
+
+(define (torque m)
+	(if (not (pair? (branch-length m)))
+			(* (branch-length m) (total-weight m))
+			0))
+
+(define (balanced? m)
+	(if (pair? (branch-length m))
+		(and 
+			(= (torque (left-branch m)) (torque (right-branch m)))
+			(balanced? (left-branch m))
+			(balanced? (right-branch m)))
+		(if (pair? (branch-structure m))
+		(and 
+			(= (torque (left-branch (branch-structure m))) (torque (right-branch (branch-structure m))))
+			(balanced? (left-branch (branch-structure m)))
+			(balanced? (right-branch (branch-structure m))))
+			#t)))
+
+;(display (balanced? test-mobile))
+;(newline)
+
+;;;; d. ;;;;
+
+(define (make-mobile left right)
+	(cons left right))
+
+(define (make-branch length structure)
+	(cons length structure))
+
+(define (right-branch m) (cdr m))
+
+(define (branch-structure b) (cdr b))
+
+(define test-mobile 
+		(make-mobile
+			(make-branch 2
+				(make-mobile 
+					(make-branch 1 2) (make-branch 2 1)))
+			(make-branch 1 3)))
+
+;(display (total-weight test-mobile))
+;(newline)
+
+;(display (balanced? test-mobile))
+;(newline)
+
+;;; 2.30 ;;;
+
+(define (square-tree tree)
+	(cond 
+		((null? tree) nil)
+		((pair? tree) (cons (square-tree (car tree)) (square-tree (cdr tree))))
+		(else (* tree tree))))
+
+;(display
+;	(square-tree
+;		(list 1
+;			(list 2 (list 3 4) 5)
+;			(list 6 7))))
+;(newline)
+
+(define (square-tree tree)
+	(map 
+		(lambda (sub-tree)
+			(if (pair? sub-tree) (square-tree sub-tree)
+				(* sub-tree sub-tree)))
+		tree))
+
+;(display
+;	(square-tree
+;		(list 1
+;			(list 2 (list 3 4) 5)
+;			(list 6 7))))
+;(newline)
+
+;;; 2.31 ;;;
+
+(define (tree-map fn tree)
+	(map
+		(lambda (sub-tree)
+			(if (pair? sub-tree) (tree-map fn sub-tree)
+				(fn sub-tree)))
+		tree))
+
+(define (square x) (* x x))
+
+(define (square-tree tree) (tree-map square tree))
+
+;(display
+;	(square-tree
+;		(list 1
+;			(list 2 (list 3 4) 5)
+;			(list 6 7))))
+;(newline)
+
+;;; 2.32 ;;;
+
+(define (subsets s)
+	(if (null? s)
+		(list nil)
+		(let ((rest (subsets (cdr s))))
+			(append rest 
+				(map 
+					(lambda (r)
+						(cons (car s) r))
+					rest)))))
+
+;(display (subsets (list 1 2 3)))
+;(newline)
+
+;;; 2.33 ;;;
+
+(define (accumulate op initial sequence)
+	(if (null? sequence)
+		initial
+		(op (car sequence)
+			(accumulate op initial (cdr sequence)))))
+
+(define (map-a p sequence)
+	(accumulate 
+		(lambda (x y) 
+			(cons (p x) y))
+		nil sequence))
+
+;(display (map-a (lambda (x) (* x x)) (list 1 2 3)))
+;(newline)
+
+(define (append seq1 seq2)
+	(accumulate cons seq2 seq1))
+
+;(display (append (list 1 2 3) (list 4 5 6)))
+;(newline)
+
+(define (length sequence)
+  (accumulate (lambda (x y) (+ y 1)) 0 sequence))
+
+;(display (length (list 1 2 3)))
+;(newline)
+
+;;; 2.34 ;;;
+
+(define (horner-eval x coefficient-sequence)
+	(accumulate (lambda (this-coeff higher-terms) (+ (* higher-terms x) this-coeff))
+		0
+		coefficient-sequence))
+
+;(display (horner-eval 2 (list 1 3 0 5 0 1)))
+;(newline)
+
+;;; 2.35 ;;;
+
+(define (count-leaves t)
+	(accumulate (lambda (x y) (+ y x)) 0 (map (lambda (x) (if (pair? x) (count-leaves x) 1)) t)))
+
+(define x (cons (list 1 2) (list 3 4)))
+;(display (count-leaves (list x x)))
+;(newline)
+
+;;; 2.36 ;;;
+
+(define (accumulate-n op init seqs)
+	(if (null? (car seqs))
+		nil
+		(cons (accumulate op init (accumulate (lambda (x y) (cons (car x) y)) nil seqs))
+			(accumulate-n op init (accumulate (lambda (x y) (cons (cdr x) y)) nil seqs)))))
+
+;(display (accumulate-n + 0 (list (list 1 2 3) (list 4 5 6) (list 7 8 9) (list 10 11 12))))
+;(newline)
+
+;;; 2.37 ;;;
+
+; | 1 2 3 |
+; | 4 5 6 |
+; | 7 8 9 |
+(define m (list (list 1 2 3) (list 4 5 6) (list 7 8 9)))
+
+; | 1 |
+; | 2 |
+; | 3 |
+(define v (list 1 2 3))
+
+(define (dot-product v w)
+	(accumulate + 0 (map * v w)))
+
+(define (matrix-*-vector m v)
+	(map (lambda (r) (dot-product v r)) m))
+
+; | (1*1 + 2*2 + 3*3) | = | 14 |
+; | (4*1 + 5*2 + 6*3) | = | 32 |
+; | (7*1 + 8*2 + 9*3) | = | 50 |
+;(display (matrix-*-vector m v))
+;(newline)
+
+(define (transpose mat)
+	(accumulate-n cons nil mat))
+
+;(display (transpose m))
+;(newline)
+
+(define (matrix-*-matrix m n)
+	(let ((cols (transpose n)))
+		(map 
+			(lambda (r) 
+				(accumulate (lambda (x y) (cons (dot-product x r) y)) nil cols))
+			m)))
+
+;(display (matrix-*-matrix m (transpose m)))
+;(newline)
+
+;;; 2.38 ;;;
+
+(define (fold-right op initial sequence) (accumulate op initial sequence))
+
+(define (fold-left op initial sequence)
+	(define (iter result rest)
+		(if (null? rest)
+			result
+			(iter (op result (car rest))
+				(cdr rest))))
+	(iter initial sequence))
+
+;(display (fold-right / 1 (list 1 2 3)))
+;(newline)
+
+;(display (fold-left / 1 (list 1 2 3)))
+;(newline)
+
+;(display (fold-right list nil (list 1 2 3)))
+;(newline)
+
+;(display (fold-left list nil (list 1 2 3)))
+;(newline)
+
+;; a op b == b op a
+
+;;; 2.39 ;;;
+
+(define (reverse sequence)
+	(fold-right (lambda (x y) (append y (list x))) nil sequence))
+
+;(display (reverse (list 1 2 3)))
+;(newline)
+
+(define (reverse sequence)
+	(fold-left (lambda (x y) (cons y x)) nil sequence))
+
+;(display (reverse (list 1 2 3)))
+;(newline)
+
+;;; 2.40 ;;;
+
+(define (enumerate-interval min-val max-val)
+	(define (enumerate-interval-loop n)
+		(if (> n max-val) nil
+			(cons n (enumerate-interval-loop (+ n 1)))))
+	(enumerate-interval-loop min-val))
+
+(define (flatmap proc seq)
+	(accumulate append nil (map proc seq)))
+
+(define (unique-pairs n)
+	(flatmap
+		(lambda (i)
+			(map (lambda (j) (list i j))
+				(enumerate-interval 1 (- i 1))))
+		(enumerate-interval 1 n)))
+
+;(display (unique-pairs 5))
+;(newline)
+
+(define (divides? a b)
+	(= (remainder b a) 0))
+
+(define (find-divisor n test-divisor)
+	(cond ((> (square test-divisor) n) n)
+		((divides? test-divisor n) test-divisor)
+		(else (find-divisor n (+ test-divisor 1)))))
+
+(define (smallest-divisor n)
+	(find-divisor n 2))
+
+(define (prime? n)
+  (= n (smallest-divisor n)))
+
+(define (prime-sum? pair)
+	(prime? (+ (car pair) (cadr pair))))
+
+(define (make-pair-sum pair)
+	(list (car pair) (cadr pair) (+ (car pair) (cadr pair))))
+
+(define (prime-sum-pairs n)
+	(map make-pair-sum
+		(filter prime-sum? (unique-pairs n))))
+
+;(display (prime-sum-pairs 6))
+;(newline)
+
+;;; 2.41 ;;;
+
+(define (unique-triplets n)
+	(flatmap
+		(lambda (i)
+			(flatmap (lambda (j) 
+					(map 
+						(lambda (k) (list i j k))
+						(enumerate-interval 1 (- j 1))))
+					(enumerate-interval 1 (- i 1))))
+		(enumerate-interval 1 n)))
+
+(define (s-sum-triplets n s)
+	(filter (lambda (x) (= (+ (car x) (cadr x) (caddr x)) s)) (unique-triplets n)))
+
+;(display (s-sum-triplets 5 8))
+;(newline)
+
+;;; 2.42 ;;;
+
+(define (queens board-size)
+	(define (queen-cols k)  
+		(if (= k 0)
+			(list empty-board)
+			(filter
+				(lambda (positions) (safe? k positions))
+				(flatmap
+					(lambda (rest-of-queens)
+						(map (lambda (new-row)
+								(adjoin-position new-row k rest-of-queens))
+							(enumerate-interval 1 board-size)))
+					(queen-cols (- k 1))))))
+	(queen-cols board-size))
+
+(define empty-board nil)
+
+(define (make-queen col row)
+	(cons col row))
+
+(define (queen-col q)
+	(car q))
+
+(define (queen-row q)
+	(cdr q))
+
+(define (adjoin-position new-row k rest-of-queens)
+	(append rest-of-queens (list (make-queen k new-row))))
+
+(define (safe? k positions)
+	(define (is-current queen) (= (car queen) k))
+	(define (current-queen) (car (filter is-current positions)))
+	(define (other-queens) (filter (lambda (q) (not (is-current q))) positions))
+	(= 0 (length 
+			(filter (lambda (other-queen)
+					(let ((queen (current-queen)))
+						(or
+							(= (queen-row queen) (queen-row other-queen)) ; In same row
+							(= (queen-row queen) (+ (queen-row other-queen) (- (queen-col queen) (queen-col other-queen)))) ; diagonal down
+							(= (queen-row queen) (- (queen-row other-queen) (- (queen-col queen) (queen-col other-queen))))))) ; diagonal up
+				(other-queens)))))
+
+;(display (queens 8))
+;(newline)
+
+;;; 2.43 ;;;
+
+; The original method filters each queen as it is added, meaning it will only ever
+; generate a future rows for each queen succesfully added.  The switched version,
+; however, calculates all possibilities and then filters, meaning it generates
+; 2^(n^2) possibilities.
+
+;;; 2.44 ;;;
+
+(define (up-split painter n)
+	(if (= n 0)
+		painter
+		(let ((smaller (up-split painter (- n 1))))
+			(below painter (beside smaller smaller)))))
+
+;;; 2.45 ;;;
+
+(define (split fn1 fn2)
+	(lambda (painter n)
+		(if (= n 0)
+			painter
+			(let ((smaller ((split fn1 fn2) painter (- n 1))))
+				(fn1 painter (fn2 smaller smaller))))))
+
+;;; 2.46 ;;;
 
 
