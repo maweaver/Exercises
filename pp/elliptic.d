@@ -128,7 +128,8 @@ class IntEllipticCurvePoint {
  +/
 class IntEllipticCurve {
 	private:
-	
+
+	bool[] _pointsCalced;
 	IntEllipticCurvePoint[][] _points;
 	IntEllipticCurvePoint _inf;
 	int _k;
@@ -147,22 +148,9 @@ class IntEllipticCurve {
 		_inf = new IntEllipticCurvePoint(new WrappedInt(0, k), new WrappedInt(0, k), this, true);
 		
 		_points.length = k;
-		for(int x = 0; x < k; x++) {
-			auto wix = new WrappedInt(x, k);
-			auto ySquared = wix.pow(3) + wix * a + b;
-			if(ySquared.val == 0) {
-				_points[x] = new IntEllipticCurvePoint[1];
-				_points[x][0] = new IntEllipticCurvePoint(wix, ySquared, this);
-			} else {
-				try {
-					auto ys = ySquared.sqrt();
-					_points[x] = new IntEllipticCurvePoint[2];
-					_points[x][0] = new IntEllipticCurvePoint(wix, ys[0], this);
-					_points[x][1] = new IntEllipticCurvePoint(wix, ys[1], this);
-				} catch(Exception) {
-					// Do nothing... this just means there are no y's for this x
-				}
-			}
+		_pointsCalced.length = k;
+		for(int i = 0; i < k; i++) {
+			_pointsCalced[i] = false;
 		}
 	}
 	
@@ -198,6 +186,49 @@ class IntEllipticCurve {
 	 + The 0, 1, or 2 points at the given x value
 	 +/
 	IntEllipticCurvePoint[] pointsAt(int x) {
+		if(!_pointsCalced[x]) {
+			auto wix = new WrappedInt(x, k);
+			
+			/+
+			
+			This method generates a true elliptic curve by calculating the square root
+			of (x^3 + ax + b).  The square root function on WrappedInt ensures that
+			only values with two roots are included.
+			
+			However, for elliptic curve integer factorization, we want to allow for
+			pseudo-elliptic curves, which can have > 2 y values for the same x value.
+			For this reason, we loop through and include all matching y values, rather
+			than using the sqrt function.
+			
+			auto ySquared = wix.pow(3) + wix * a + b;
+			if(ySquared.val == 0) {
+				_points[x] = new IntEllipticCurvePoint[1];
+				_points[x][0] = new IntEllipticCurvePoint(wix, ySquared, this);
+			} else {
+				try {
+					auto ys = ySquared.sqrt();
+					_points[x] = new IntEllipticCurvePoint[2];
+					_points[x][0] = new IntEllipticCurvePoint(wix, ys[0], this);
+					_points[x][1] = new IntEllipticCurvePoint(wix, ys[1], this);
+				} catch(Exception e) {
+					// Do nothing... this just means there are no y's for this x
+					writefln("Exception: %s", e.msg);
+				}
+			}
+			+/
+			
+			// _points[x] = new IntEllipticCurvePoint[];
+			for(int y = 0; y < k; y++) {
+				auto wiy = new WrappedInt(y, k);
+				if(wiy.square() == (wix.pow(3) + wix * a + b)) {
+					_points[x].length = _points[x].length + 1;
+					_points[x][_points[x].length - 1] = new IntEllipticCurvePoint(wix, wiy, this);
+				}
+			}
+			
+			_pointsCalced[x] = true;
+		}
+			
 		return _points[x];
 	}
 
@@ -246,7 +277,4 @@ class IntEllipticCurve {
 		writefln("5 * (1, 2) = (1, 2) [%s]", (p1 * 5).toString);
 		assert(p1 * 5 == new IntEllipticCurvePoint(new WrappedInt(1, 5), new WrappedInt(2, 5), curve));
 	}
-}
-
-void main() {
 }

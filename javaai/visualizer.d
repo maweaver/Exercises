@@ -2,6 +2,14 @@ import std.math;
 import std.stdio;
 import std.string;
 
+
+/++
+ + Class containing information on a frame in the visualization.  Purposefully
+ + has no fields; designed to be subclassed.
+ +/
+class FrameData {
+}
+
 /++
  + A color with red, green, blue, and alpha channels.
  +/
@@ -29,7 +37,25 @@ struct Size {
 }
 
 /++
+ + A transformation matrix
+ +
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-matrix.html#cairo-matrix-t
+ +/
+struct Matrix {
+	double xx;
+	double yx;
+	double xy;
+	double yy;
+	double x0;
+	double y0;
+}
+
+/++
  + The style used to draw the ends of lines
+ +
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-line-cap-t
  +/
 enum LineCap {
 	Butt,   /// No extra ending to the line
@@ -39,6 +65,9 @@ enum LineCap {
 
 /++
  + The style used to join lines
+ +
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-line-cap-t
  +/
 enum LineJoin {
 	Miter,  /// Edges are extended to form sharp corners
@@ -48,6 +77,9 @@ enum LineJoin {
 
 /++
  + Slant of the font
+ +
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-text.html#cairo-font-slant-t
  +/
 enum FontSlant {
 	Normal,
@@ -57,10 +89,64 @@ enum FontSlant {
 
 /++
  + Weight of the font
+ +
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-text.html#cairo-font-weight-t
  +/
 enum FontWeight {
 	Normal,
 	Bold
+}
+
+/++
+ + See_Also: 
+ +   http://library.gnome.org/devel/cairo/stable/cairo-surface.html#cairo-content-t
+ +/
+enum Content {
+	Color = 0x1000,      /// Surface holds only color content
+	Alpha = 0x2000,      /// Surface holds only alpha content
+	ColorAlpha = 0x3000  /// Surface holds color and alpha content
+}
+
+/++
+ + See_Also: 
+ +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-antialias-t
+ +/
+enum Antialias {
+	Default,  /// Default antialiasing
+	None,     /// No antialiasing
+	Gray,     /// Single-color antialising
+	Subpixel  /// Subpixel antialiasing
+}
+
+/++
+ + See_Also:
+ +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-fill-rule-t
+ +/
+enum FillRule {
+	Winding,  /// Takes path direction into account when filling
+	EvenOdd   /// Does not take orientation into account when filling
+}
+
+/++
+ + See_Also:
+ +   http://cairographics.org/operators/
+ +/
+enum Operator {
+	Clear,     /// Clear destination layer
+	Source,    /// Replace destination layer
+	Over,      /// Draw source on top of destination
+	In,        /// Draw source where there was destination
+	Out,       /// Draw source where there was no destination
+	Atop,      /// Draw source on top of destination
+	Dest,      /// Ignore source
+	DestOver,  /// Draw destination on top of source
+	DestIn,    /// Leave destination only where there was source
+	DestOut,   /// Leave destination only where there was no source
+	DestAtop,  /// Leave destination on top of source
+	Xor,       /// Source and destination are shown where there's only one
+	Add,       /// Source and destination are accumulated
+	Saturate   /// Assumes source and dest are disjoint
 }
 
 /++
@@ -71,11 +157,19 @@ enum FontWeight {
 class Canvas {
 	private:
 	
+	/**************************************
+	 * Internal State
+	 *************************************/
+	
 	cairo_t _cr;
 	int _imageWidth;
 	int _imageHeight;
 	
 	public:
+	
+	/**************************************
+	 * Constructor
+	 *************************************/
 	
 	/++
 	 + Constructor
@@ -85,9 +179,15 @@ class Canvas {
 		
 		logicalWidth = 100;
 		logicalHeight = 100;
+		translateX = 0;
+		translateY = 0;
 		_imageWidth = imageWidth;
 		_imageHeight = imageHeight;
 	}
+	
+	/**************************************
+	 * Properties
+	 *************************************/
 	
 	/++
 	 + The logical width of the image.
@@ -100,6 +200,16 @@ class Canvas {
 	int logicalHeight;
 	
 	/++
+	 + X Translation
+	 +/
+	double translateX;
+	
+	/++
+	 + Y Translation
+	 +/
+	double translateY;
+	
+	/++
 	 + The physical width of the image
 	 +/
 	int imageWidth() { 
@@ -109,7 +219,229 @@ class Canvas {
 	/++
 	 + The physical height of the image
 	 +/
-	int imageHeight() { return _imageHeight; }
+	int imageHeight() { 
+		return _imageHeight; 
+	}
+	
+	/**************************************
+	 * Base Cairo functions
+	 *************************************/
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-save
+	 +/
+	void cairoSave() {
+		cairo_save(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-restore
+	 +/
+	void cairoRestore() {
+		cairo_restore(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-push-group
+	 +/
+	void cairoPushGroup() {
+		cairo_push_group(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-push-group-with-content
+	 +/
+	void cairoPushGroupWithContent(Content content) {
+		cairo_push_group_with_content(_cr, content);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-pop-group
+	 +/
+	Pattern cairoPopGroup() {
+		return cairo_pop_group(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-pop-group-to-source
+	 +/
+	void cairoPopGroupToSource() {
+		cairo_pop_group_to_source(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-source-rgb
+	 +/
+	void cairoSetSourceRgb(Color color) {
+		cairo_set_source_rgb(_cr, color.r, color.g, color.b);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-source-rgba
+	 +/
+	void cairoSetSourceRgba(Color color) {
+		cairo_set_source_rgba(_cr, color.r, color.g, color.b, color.a);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-source
+	 +/	
+	void cairoSetSource(Pattern source) {
+		cairo_set_source(_cr, source);
+	}
+	 
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-get-source
+	 +/	
+	Pattern cairoGetSource() {
+		return cairo_get_source(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-antialias
+   +/
+	void cairoSetAntialias(Antialias a) {
+		cairo_set_antialias(_cr, a);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-dash
+   +/
+	void cairoSetDash(double[] dash) {
+		if(dash.length > 0) {
+			cairo_set_dash(_cr, &dash[0], dash.length, 0);
+		} else {
+			cairo_set_dash(_cr, null, 0, 0);
+		}
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-fill-rule
+	 +/
+	void cairoSetFillRule(FillRule fr) {
+		cairo_set_fill_rule(_cr, fr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-line-cap
+	 +/
+	void cairoSetLineCap(LineCap lc) {
+		cairo_set_line_cap(_cr, lc);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-line-join
+	 +/
+	void cairoSetLineJoin(LineJoin lj) {
+		cairo_set_line_join(_cr, lj);
+	}
+
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-line-width
+	 +/
+	void cairoSetLineWidth(double width) {
+		cairo_set_line_width(_cr, width);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-miter-limit
+	 +/
+	void cairoSetMiterLimit(double lim) {
+		cairo_set_miter_limit(_cr, lim);
+	}
+	
+	/++
+	 + See_Also
+	 +   http://cairographics.org/operators/
+	 +/
+	void cairoSetOperator(Operator op) {
+		cairo_set_operator(_cr, op);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-set-tolerance
+	 +/
+	void cairoSetTolerance(double tolerance) {
+		cairo_set_tolerance(_cr, tolerance);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-fill
+	 +/
+	void cairoFill() {
+		cairo_fill(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-fill-preserve
+	 +/
+	void cairoFillPreserve() {
+		cairo_fill_preserve(_cr);
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-paint
+	 +/
+	void cairoPaint() {
+		cairo_paint(_cr);
+	}	
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-paint-with-alpha
+	 +/
+	void cairoPaintWithAlpha(double a) {
+		cairo_paint_with_alpha(_cr, a);
+	}	
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-stroke
+	 +/
+	void cairoStroke() {
+		cairo_stroke(_cr);
+	}	
+
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-context.html#cairo-stroke-preserve
+	 +/
+	void cairoStrokePreserve() {
+		cairo_stroke_preserve(_cr);
+	}		
+
+	/**************************************
+	 * Higher Level Functions
+	 *************************************/
+	 
+	/++
+	 + Uses window coordinate system, rather than physical
+	 +/
+	void useWindowCoordinates() {
+		translateX = - cast(real) logicalWidth / 2.0;
+		translateY = - cast(real) logicalHeight / 2.0;
+	}
 	
 	/++
 	 + Converts a point from its logical coordinates to a physical point on the screen.
@@ -118,8 +450,8 @@ class Canvas {
 		auto scale = fmin(cast(real) imageWidth / cast(real) logicalWidth,
 			cast(real) imageHeight / cast(real) logicalHeight);
 		
-		return Point(p.x * scale + cast(real) logicalWidth * scale / 2.0, 
-			           p.y * scale + cast(real) logicalHeight * scale / 2.0);
+		return Point((p.x + translateX) * scale + cast(real) imageWidth / 2.0, 
+			           (p.y + translateY) * scale + cast(real) imageHeight / 2.0);
 	}
 	
 	/++
@@ -339,13 +671,27 @@ class Canvas {
 	}
 }
 
+
 /++
  + A callback function which does the drawing.
  +/
-typedef void function(Canvas) DrawFunction;
+typedef void function(Canvas, int, FrameData) DrawFunction;
+
+class DrawingInfo {
+	public:
+	
+	gpointer win;
+	DrawFunction fn;
+	FrameData[] frames;
+	int numFrames;
+	int curFrame;
+	bool paused;
+}
 
 extern(C) {
 	void *visualization_draw_handler(gpointer w, gpointer e, gpointer data) {
+		auto info = *(cast(DrawingInfo*) data);	
+
 		int width;
 		int height;
 		gdk_drawable_get_size(gtk_widget_get_window(w), &width, &height);
@@ -356,11 +702,25 @@ extern(C) {
 		
 		auto surface = cairo_get_target(context);
 	
-		auto drawFn = *(cast(DrawFunction*) data);
-		drawFn(new Canvas(context, width, height));
+		writefln("Drawing frame %d", info.curFrame);
+		info.fn(new Canvas(context, width, height), info.curFrame, info.frames[cast(int) fmin(info.curFrame, info.frames.length - 1)]);
 	
 		cairo_destroy(context);
 		return null;
+	}	
+	
+	int visualization_timeout_handler(gpointer data) {
+		auto info = *(cast(DrawingInfo*) data);
+		if(info.curFrame < info.numFrames - 1) {
+			info.curFrame += 1;
+			int width;
+			int height;
+			gdk_drawable_get_size(gtk_widget_get_window(info.win), &width, &height);
+			gtk_widget_queue_draw_area(info.win, 0, 0, width, height);
+			return 1;
+		} else {
+			return 0;
+		}
 	}
 }
 
@@ -372,18 +732,27 @@ extern(C) {
  +   fn = Function used to perform the drawing
  +   size = Initial drawing size
  +/
-void createDrawing(string title, DrawFunction fn, Size size = Size(200, 200)) {
+ void createVisualization(string title, DrawFunction fn, int frameLength, FrameData[] frames = [ new FrameData() ], int numFrames = 1, Size size = Size(200, 200)) {
 	gtk_init(0, null);
 	
 	auto window = gtk_window_new(0);
 	auto da = gtk_drawing_area_new();
+
+	auto info = new DrawingInfo();
+	info.win = da;
+	info.fn = fn;
+	info.frames = frames;
+	info.numFrames = numFrames;
+	info.curFrame = 0;
 	
-	g_signal_connect_data(da, toStringz("expose-event"), cast(gpointer) &visualization_draw_handler, cast(gpointer) &fn, null, 0);
+	g_signal_connect_data(da, toStringz("expose-event"), cast(gpointer) &visualization_draw_handler, cast(gpointer) &info, null, 0);
 	g_signal_connect_data(window, toStringz("destroy"), cast(gpointer) &gtk_main_quit, null, null, 0);
 	gtk_container_add(window, da);
 	
 	gtk_window_set_title(window, toStringz(title));
 	gtk_window_set_default_size(window, cast(int) size.width, cast(int) size.height);
+	
+	g_timeout_add(frameLength, cast(gpointer) &visualization_timeout_handler, cast(gpointer) &info);
 	
 	gtk_widget_show_all(window);
 	gtk_main();
@@ -394,6 +763,7 @@ extern(C) {
 	typedef void *gpointer;
 	typedef void *cairo_t;
 	typedef void *cairo_surface_t;
+	typedef void *Pattern; /// A pattern used to draw with
 	
 	// Core GTK functions
 	void gtk_container_add(void*, void*);
@@ -407,11 +777,13 @@ extern(C) {
 	gpointer gtk_drawing_area_new();
 	gpointer gtk_widget_get_window(gpointer);
 	void gdk_drawable_get_size(gpointer, int*, int*);
-	void gtk_window_set_title(gpointer, const char*);
+	void gtk_window_set_title(gpointer, char*);
 	void gtk_window_set_default_size(gpointer, int, int);
-
+	void gtk_widget_queue_draw_area(gpointer, int, int, int, int);
+	
 	// GTK Signal Functions
-	void g_signal_connect_data(gpointer, const char*, gpointer, gpointer, gpointer, int);
+	void g_signal_connect_data(gpointer, char*, gpointer, gpointer, gpointer, int);
+	void g_timeout_add(uint, gpointer, gpointer);
 
 	// Cairo Functions
 	cairo_t gdk_cairo_create(gpointer);
@@ -419,50 +791,37 @@ extern(C) {
 	void cairo_clip(cairo_t);
 	void cairo_destroy(cairo_t);
 	void cairo_fill(cairo_t);
+	void cairo_fill_preserve(cairo_t);
+	Pattern cairo_get_source(cairo_t);
 	cairo_surface_t cairo_get_target(cairo_t);
 	int cairo_image_surface_get_width(cairo_surface_t);
 	int cairo_image_surface_get_height(cairo_surface_t);
 	void cairo_line_to(cairo_t, double, double);
 	void cairo_move_to(cairo_t, double, double);
+	void cairo_paint(cairo_t);
+	void cairo_paint_with_alpha(cairo_t, double);
+	Pattern cairo_pop_group(cairo_t);
+	void cairo_pop_group_to_source(cairo_t);
+	void cairo_push_group(cairo_t);
+	void cairo_push_group_with_content(cairo_t, Content);
 	void cairo_rectangle(cairo_t, double, double, double, double);
-	void cairo_select_font_face(cairo_t, const char*, int, int);
+	void cairo_restore(cairo_t);
+	void cairo_save(cairo_t);
+	void cairo_select_font_face(cairo_t, char*, int, int);
+	void cairo_set_antialias(cairo_t, int);
 	void cairo_set_dash(cairo_t, double*, int, int);
+	void cairo_set_fill_rule(cairo_t, int);
 	void cairo_set_font_size(cairo_t, double);
+	void cairo_set_miter_limit(cairo_t, double);
+	void cairo_set_source(cairo_t, Pattern);
+	void cairo_set_source_rgb(cairo_t, double, double, double);
 	void cairo_set_source_rgba(cairo_t, double, double, double, double);
 	void cairo_set_line_cap(cairo_t, int);
 	void cairo_set_line_join(cairo_t, int);
 	void cairo_set_line_width(cairo_t, double);
-	void cairo_show_text(cairo_t, const char *);
+	void cairo_set_operator(cairo_t, int);
+	void cairo_set_tolerance(cairo_t, double);
+	void cairo_show_text(cairo_t, char *);
 	void cairo_stroke(cairo_t);
 	void cairo_stroke_preserve(cairo_t);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// Sample
-//
-////////////////////////////////////////////////////////////////////////////////
-
-void draw(Canvas c) {
-	c.fill(Color(1.0, 0.5, 0.3));
-	c.drawCircle(Point(0, 0), 33, 
-		Color(0.0, 0.0, 0.0, 1.0), 
-		Color(0.0, 1.0, 0.0, 0.7), 
-		2, [ 1.0, 3.0 ]);
-	c.drawLine(Point(-25, -25), Point(25, 25), Color(1.0, 0.0, 0.0, 0.5), 5.0);
-	c.drawLine(Point(25, -25), Point(-25, 25), Color(0.0, 0.0, 1.0, 0.5), 5.0);
-	c.drawCircle(Point(-40, -40), Point(40, 40),
-		Color(0.0, 0.0, 0.0, 0.0),
-		Color(0.0, 0.0, 0.0, 0.2));
-	c.drawRectangle(Point(-45, -45), Size(90, 10),
-		Color(0.0, 0.0, 0.0, 1.0),
-		Color(0.0, 0.0, 0.3, 1.0), 5);
-	c.drawRectangle(Point(-45, 35), Point(45, 45),
-		Color(0.0, 0.0, 0.0, 1.0),
-		Color(0.0, 0.0, 0.3, 1.0), 5);
-	c.drawText("Hello, World", Point(-45, -35), 10, "Sans", FontSlant.Italic, FontWeight.Bold, Color(1.0, 1.0, 1.0, 1.0));
-}
-
-void main() {
-//	createDrawing("Maze", &draw, Size(500, 500));
 }

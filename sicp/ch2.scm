@@ -1048,4 +1048,231 @@
 
 ;;; 2.46 ;;;
 
+(define (make-vect x y) (cons x y))
 
+(define (xcor-vect v) (car v))
+(define (ycor-vect v) (cdr v))
+
+(define (add-vect v1 v2) (make-vect (+ (xcor-vect v1) (xcor-vect v2)) (+ (ycor-vect v1) (ycor-vect v2))))
+(define (sub-vect v1 v2) (make-vect (- (xcor-vect v1) (xcor-vect v2)) (- (ycor-vect v1) (ycor-vect v2))))
+(define (scale-vect s v) (make-vect (* s (xcor-vect v)) (* s (ycor-vect v))))
+
+;(display (add-vect (make-vect 1 2) (make-vect 3 4)))
+;(newline)
+
+;(display (sub-vect (make-vect 1 2) (make-vect 3 4)))
+;(newline)
+
+;(display (scale-vect 2 (make-vect 1 2)))
+;(newline)
+
+;;; 2.47 ;;;
+
+(define (frame-coord-map frame)
+	(lambda (v)
+		(add-vect
+			(origin-frame frame)
+			(add-vect (scale-vect (xcor-vect v)
+					(edge1-frame frame))
+				(scale-vect (ycor-vect v)
+					(edge2-frame frame))))))
+
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(define (origin-frame f) (car f))
+(define (edge1-frame f) (cadr f))
+(define (edge2-frame f) (caddr f))
+
+;(display ((frame-coord-map (make-frame (make-vect 0 0) (make-vect 1 0) (make-vect 0 1))) (make-vect 0.5 0.5)))
+;(newline)
+
+(define (make-frame origin edge1 edge2)
+  (cons origin (cons edge1 edge2)))
+
+(define (origin-frame f) (car f))
+(define (edge1-frame f) (cadr f))
+(define (edge2-frame f) (cddr f))
+
+;(display ((frame-coord-map (make-frame (make-vect 0 0) (make-vect 1 0) (make-vect 0 1))) (make-vect 0.5 0.5)))
+;(newline)
+
+;;; 2.48 ;;;
+
+(define (make-segment v1 v2) (cons v1 v2))
+(define (start-segment s) (car s))
+(define (end-segment s) (cdr s))
+
+;(display (start-segment (make-segment (make-vect 1 2) (make-vect 3 4))))
+;(newline)
+
+;(display (end-segment (make-segment (make-vect 1 2) (make-vect 3 4))))
+;(newline)
+
+;;; 2.49 ;;;
+
+(define (segments->painter segment-list)
+	(lambda (frame)
+		(for-each
+			(lambda (segment)
+				(draw-line
+					((frame-coord-map frame) (start-segment segment))
+					((frame-coord-map frame) (end-segment segment))))
+			segment-list)))
+
+(define (draw-line v1 v2)
+	(display v1)
+	(display " -> ")
+	(display v2)
+	(newline))
+
+;;;; a ;;;;;
+
+(define simple-frame (make-frame (make-vect 0 0) (make-vect 1 0) (make-vect 0 1)))
+
+(define outline-painter (segments->painter 
+			(list
+				(make-segment (make-vect 0 0) (make-vect 1 0)) 
+				(make-segment (make-vect 1 0) (make-vect 1 1))
+				(make-segment (make-vect 1 1) (make-vect 0 1))
+				(make-segment (make-vect 0 1) (make-vect 0 0)))))
+
+;(outline-painter simple-frame)
+
+;;;; b ;;;;;
+
+(define outline-painter (segments->painter 
+			(list
+				(make-segment (make-vect 0 0) (make-vect 1 1)) 
+				(make-segment (make-vect 1 0) (make-vect 0 1)))))
+
+;(outline-painter simple-frame)
+
+;;;; c ;;;;
+
+(define diamond-painter (segments->painter 
+			(list
+				(make-segment (make-vect 0.5 0.0) (make-vect 1.0 0.5)) 
+				(make-segment (make-vect 1.0 0.5) (make-vect 0.5 1.0)) 
+				(make-segment (make-vect 0.5 1.0) (make-vect 0.0 0.5)) 
+				(make-segment (make-vect 0.0 0.5) (make-vect 0.5 0.0)))))
+
+
+;(diamond-painter simple-frame)
+
+;;;; d ;;;;
+
+; as above, but with different coords
+
+;;; 2.50 ;;;
+
+(define (transform-painter painter origin corner1 corner2)
+	(lambda (frame)
+		(let ((m (frame-coord-map frame)))
+			(let ((new-origin (m origin)))
+				(painter
+					(make-frame new-origin
+						(sub-vect (m corner1) new-origin)
+						(sub-vect (m corner2) new-origin)))))))
+
+(define (flip-vert painter)
+	(transform-painter painter
+		(make-vect 0.0 1.0)
+		(make-vect 1.0 1.0)
+		(make-vect 0.0 0.0)))
+
+(define slash-painter (segments->painter
+		(list
+			(make-segment (make-vect 0.0 0.0) (make-vect 1.0 1.0)))))
+
+(define (flip-horiz painter)
+	(transform-painter painter
+		(make-vect 1.0 0.0)
+		(make-vect 0.0 0.0)
+		(make-vect 1.0 1.0)))
+
+;((flip-horiz slash-painter) simple-frame)
+
+(define rotate180 flip-vert)
+
+;((rotate180 slash-painter) simple-frame)
+
+(define (rotate270 painter)
+	(transform-painter painter
+		(make-vect 1.0 0.0)
+		(make-vect 0.0 0.0)
+		(make-vect 1.0 1.0)))
+
+;((rotate270 slash-painter) simple-frame)
+
+;;; 2.51 ;;;
+
+(define (beside painter1 painter2)
+	(let ((split-point (make-vect 0.5 0.0)))
+		(let ((paint-left
+					(transform-painter painter1
+						(make-vect 0.0 0.0)
+						split-point
+						(make-vect 0.0 1.0)))
+				(paint-right
+					(transform-painter painter2
+						split-point
+						(make-vect 1.0 0.0)
+						(make-vect 0.5 1.0))))
+			(lambda (frame)
+				(paint-left frame)
+				(paint-right frame)))))
+
+(define (below painter1 painter2)
+	(let ((split-point (make-vect 0.0 0.5)))
+		(let ((paint-bottom
+					(transform-painter painter1
+						(make-vect 0.0 0.0)
+						(make-vect 1.0 0.0)
+						split-point))
+				(paint-top
+					(transform-painter painter2
+						split-point
+						(make-vect 1.0 0.5)
+						(make-vect 0.0 1.0))))
+			(lambda (frame)
+				(paint-bottom frame)
+        (paint-top frame)))))
+
+;((below slash-painter slash-painter) simple-frame)
+
+(define (rotate90 painter)
+	(transform-painter painter
+		(make-vect 1.0 0.0)
+		(make-vect 1.0 1.0)
+		(make-vect 0.0 0.0)))
+
+(define (below painter1 painter2)
+	(rotate90 (beside painter1 painter2)))
+
+;((below slash-painter slash-painter) simple-frame)
+
+;;; 2.52 ;;;
+
+;;; 2.53 ;;;
+
+(display (list 'a 'b 'c))
+(newline)
+
+(display (list (list 'george)))
+(newline)
+
+(display (cdr '((x1 x2) (y1 y2))))
+(newline)
+
+(display (cadr '((x1 x2) (y1 y2))))
+(newline)
+
+(display (pair? (car '(a short list))))
+(newline)
+
+(display (memq 'red '((red shoes) (blue socks))))
+(newline)
+
+(display (memq 'red '(red shoes blue socks)))
+(newline)
