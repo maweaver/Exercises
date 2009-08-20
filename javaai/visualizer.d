@@ -702,7 +702,6 @@ extern(C) {
 		
 		auto surface = cairo_get_target(context);
 	
-		writefln("Drawing frame %d", info.curFrame);
 		info.fn(new Canvas(context, width, height), info.curFrame, info.frames[cast(int) fmin(info.curFrame, info.frames.length - 1)]);
 	
 		cairo_destroy(context);
@@ -711,6 +710,9 @@ extern(C) {
 	
 	int visualization_timeout_handler(gpointer data) {
 		auto info = *(cast(DrawingInfo*) data);
+		if(info.paused) {
+			return 0;
+		}
 		if(info.curFrame < info.numFrames - 1) {
 			info.curFrame += 1;
 			int width;
@@ -721,6 +723,27 @@ extern(C) {
 		} else {
 			return 0;
 		}
+	}
+	
+	int visualization_keypress_handler(gpointer widget, GdkKeyEvent *event, gpointer data)  {
+		auto info = *(cast(DrawingInfo*) data);
+		if(event.keyval == 65361 && info.curFrame > 0) {
+			info.paused = true;
+			info.curFrame -= 1;
+			int width;
+			int height;
+			gdk_drawable_get_size(gtk_widget_get_window(info.win), &width, &height);
+			gtk_widget_queue_draw_area(info.win, 0, 0, width, height);
+		} else if (event.keyval == 65363 && info.curFrame < info.numFrames - 1) {
+			info.paused = true;
+			info.curFrame += 1;
+			int width;
+			int height;
+			gdk_drawable_get_size(gtk_widget_get_window(info.win), &width, &height);
+			gtk_widget_queue_draw_area(info.win, 0, 0, width, height);
+		}
+		
+		return 0;
 	}
 }
 
@@ -745,7 +768,9 @@ extern(C) {
 	info.numFrames = numFrames;
 	info.curFrame = 0;
 	
+	gtk_widget_add_events(window, 1 << 10);
 	g_signal_connect_data(da, toStringz("expose-event"), cast(gpointer) &visualization_draw_handler, cast(gpointer) &info, null, 0);
+	g_signal_connect_data(window, toStringz("key-press-event"), cast(gpointer) &visualization_keypress_handler, cast(gpointer) &info, null, 0);
 	g_signal_connect_data(window, toStringz("destroy"), cast(gpointer) &gtk_main_quit, null, null, 0);
 	gtk_container_add(window, da);
 	
@@ -765,6 +790,20 @@ extern(C) {
 	typedef void *cairo_surface_t;
 	typedef void *Pattern; /// A pattern used to draw with
 	
+	struct GdkKeyEvent {
+		int type;
+		gpointer window;
+		byte send_event;
+		uint time;
+		uint state;
+		uint keyval;
+		int length;
+		char *string;
+		ushort hardware_keycode;
+		byte group;
+		uint is_modifier;
+	};
+	
 	// Core GTK functions
 	void gtk_container_add(void*, void*);
 	void gtk_init(int, char**);
@@ -774,6 +813,7 @@ extern(C) {
 
 	// GTK Widget functions
 	gpointer gtk_window_new(int);
+	void gtk_widget_add_events(gpointer, int);
 	gpointer gtk_drawing_area_new();
 	gpointer gtk_widget_get_window(gpointer);
 	void gdk_drawable_get_size(gpointer, int*, int*);
