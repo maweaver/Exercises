@@ -1,7 +1,11 @@
+module util.visualizer;
+
 import std.math;
 import std.stdio;
 import std.string;
 
+import util.point;
+import util.size;
 
 /++
  + Class containing information on a frame in the visualization.  Purposefully
@@ -18,22 +22,6 @@ struct Color {
 	double g;        /// Green component
 	double b;        /// Blue component
 	double a = 1.0;  /// Alpha component
-}
-
-/++
- + A two-dimensional point.
- +/
-struct Point {
-	double x;  /// X coordinate of the point
-	double y;  /// Y coordinate of the point
-}
-
-/++
- + A size
- +/
-struct Size {
-	double width;   /// Width of the size
-	double height;  /// Height of the size
 }
 
 /++
@@ -450,8 +438,8 @@ class Canvas {
 		auto scale = fmin(cast(real) imageWidth / cast(real) logicalWidth,
 			cast(real) imageHeight / cast(real) logicalHeight);
 		
-		return Point((p.x + translateX) * scale + cast(real) imageWidth / 2.0, 
-			           (p.y + translateY) * scale + cast(real) imageHeight / 2.0);
+		return new Point((p.x + translateX) * scale + cast(real) imageWidth / 2.0, 
+			               (p.y + translateY) * scale + cast(real) imageHeight / 2.0);
 	}
 	
 	/++
@@ -665,8 +653,8 @@ class Canvas {
 	 +   color = Color to fill with
 	 +/
 	void fill(Color color) {
-		drawRectangle(Point(- cast(real) logicalWidth / 2.0, - cast(real) logicalHeight / 2.0),
-			Size(logicalWidth, logicalHeight),
+		drawRectangle(new Point(- cast(real) logicalWidth / 2.0, - cast(real) logicalHeight / 2.0),
+			new Size(logicalWidth, logicalHeight),
 			color, color);
 	}
 }
@@ -755,7 +743,7 @@ extern(C) {
  +   fn = Function used to perform the drawing
  +   size = Initial drawing size
  +/
- void createVisualization(string title, DrawFunction fn, int frameLength, FrameData[] frames = [ new FrameData() ], int numFrames = 1, Size size = Size(200, 200)) {
+ void createVisualization(string title, DrawFunction fn, int frameLength, FrameData[] frames = [ new FrameData() ], int numFrames = 1, Size size = new Size(200, 200)) {
 	gtk_init(0, null);
 	
 	auto window = gtk_window_new(0);

@@ -1,189 +1,123 @@
 import std.stdio;
 import std.c.stdio;
-import visualizer;
+import util.leftheap;
+import util.maze;
+import util.point;
+import util.size;
+import util.visualizer;
 
-class KnightsTourFrameData: FrameData {
-	Board board;
-			
-	this(Board board) {
-		this.board = board;
-	}
-}
-		
-class Point {
+class ChessBoard: Maze {
+	
 	private:
-		
-	int _x;
-	int _y;
-		
+	
+	Point[] perms;
+	int curTurn;
+	
 	public:
-		
-	this(int x, int y) {
-		_x = x;
-		_y = y;
-	}
-		
-	int x() {
-		return _x;
+	
+	this(int size, Point start) {
+		super(new Size(size, size), start, start, 
+			[ new Point(-1, -2), new Point(+1, -2), 
+        new Point(+2, -1), new Point(+2, +1),
+				new Point(+1, +2), new Point(-1, +2),
+				new Point(-2, -1), new Point(-2, +1) ],
+			"Knights Tour", size * size + 2, 1000);
 	}
 	
-	int y() {
-		return _y;
-	}
-		
-	int opEquals(Object o) {
-		Point op = cast(Point) o;
-		if(op) {
-			return op.x == _x && op.y == _y;
-		} else {
-			return 0;
-		}
-	}
-		
-	Point opAdd(Point p) {
-		return new Point(x + p.x, y + p.y);
-	}
-}
-
-class Board {
-	
-	private:
-	
-	int _size;
-	int[][] _tiles;
-	Point[] _perms;
-
-	bool canVisit(int n, Point p) {
-		return p.x >= 0 && p.x < _size &&
-		       p.y >= 0 && p.y < _size &&
-					 ((n == (_size * _size + 1) && _tiles[p.x][p.y] == 1) ||
-						 _tiles[p.x][p.y] == 0);
+	int finalTurn() {
+		return size.iwidth * size.iheight;
 	}
 	
-	Point[] movesFrom(int n, Point p) {
-		Point[] res;
+	override bool solved(Point p) {
+		return curTurn == finalTurn && p == goal;
+	}
+	
+	override bool visitable(Point p) {
+		return p.x >= 0 && p.x < size.width &&
+		       p.y >= 0 && p.y < size.height &&
+					 (tileAt(p) == 0 || (p == start && curTurn == finalTurn));
+	}
+	
+	override Point[] searchOperator(Point p) {
+		// Use a minimum heap to return the moves with the least number of possible
+		// next moves first
+		auto moves = new LeftHeap!(Point)(true);
 		
-		foreach(perm; _perms) {
-			auto moveP = p + perm;
-			if(canVisit(n, moveP)) {
-				res ~= moveP;
-			}
+		auto possibleMoves = movesFrom(p);
+		foreach(move; possibleMoves) {
+			moves.insert(movesFrom(move).length, move);
 		}
 		
-		return res;
+		return moves.toArray();
 	}	
 	
-	bool visit(int n, Point p, Point[] moves) {
-		if(n == (_size * _size + 1)) {
-			
-			if(_tiles[p.x][p.y] == 1) {
-				visualizeSolution();
+	override void visit(Point p) {
+		curTurn++;
+		setTile(p, curTurn);
+	}
+	
+	override void unvisit(Point p) {
+		curTurn--;
+		setTile(p, 0);
+	}
+	
+	override void preDrawFrame(Canvas c, int frameNum) {
+	}
+	
+	override void postDrawFrame(Canvas c, int frameNum) {
+		Point thisPoint;
+		Point prevPoint;
+		
+		for(int x = 0; x < size.width; x++) {
+			for(int y = 0; y < size.height; y++) {
+				auto p = new Point(x, y);
+				auto tile = tileAt(p);
+				if(tile == frameNum) {
+					thisPoint = p;
+				} else if(tile == frameNum - 1) {
+					prevPoint = p;
+				}
 			}
-			
-			return true;
+		}
+		
+		if(thisPoint && prevPoint) {
+			auto thisVizPoint = new Point(thisPoint.x * vizScale + vizScale / 2 + vizBorder, thisPoint.y * vizScale + vizScale / 2 + vizBorder);
+			auto prevVizPoint = new Point(prevPoint.x * vizScale + vizScale / 2 + vizBorder, prevPoint.y * vizScale + vizScale / 2 + vizBorder);
+			c.drawLine(
+				thisVizPoint,
+				new Point(prevVizPoint.x, thisVizPoint.y),
+				Color(0.0, 0.3, 0.8, 0.7), 5.0);
+			c.drawLine(
+				new Point(prevVizPoint.x, thisVizPoint.y),
+				prevVizPoint,
+				Color(0.0, 0.3, 0.8, 0.7), 5.0);
+		}
+	}
+	
+	override void drawTile(Canvas c, Point p, Point ul, Point lr, int frameNum) {
+		auto turnNum = tileAt(p);
+				
+		Color color;
+		if(turnNum == 1) {
+				color = Color(0.0, 0.8, 0.3);
+		} else if((p.x % 2 == 0 && p.y % 2 == 0) || 
+			        (p.x % 2 == 1 && p.y % 2 == 1)) {
+		  color = Color(1.0, 1.0, 1.0);
 		} else {
-			
-			_tiles[p.x][p.y] = n;
-		
-			Point[][Point] nextNextMoves;
-			foreach(m; moves) {
-				nextNextMoves[m] = movesFrom(n + 2, m);
-			}
-		
-			Point[] orderedMoves;
-			for(int i = 0; i < 8; i++) {
-				foreach(p, m; nextNextMoves) {
-					if(m.length == i) {
-						orderedMoves ~= p;
-					}
-				}
-			}
-
-			foreach(nextMove; orderedMoves) {
-				if(visit(n + 1, nextMove, nextNextMoves[nextMove])) {
-					return true;
-				}
-			}
-		
-			_tiles[p.x][p.y] = 0;
-			
-			return false;
+			color = Color(0.5, 0.5, 0.5);
 		}
-	}
-	
-	void visualizeSolution() {
-		auto frames = new FrameData[1];
-		frames[0] = new KnightsTourFrameData(this);
-		createVisualization("Knights Tour", &drawFunction, 1000, frames, _size * _size  + 2, Size(_size * 64, _size * 64));
-	}
-	
-	static void drawFunction(Canvas c, int frameNum, FrameData frameData) {
-		auto kdFrameData = cast(KnightsTourFrameData) frameData;
-		if(kdFrameData) {
-			auto size = kdFrameData.board._size;
-			
-			c.logicalWidth = size * 64 + 20;
-			c.logicalHeight = size * 64 + 20;
-			c.useWindowCoordinates();
-			
-			Point prevPoint;
-			Point thisPoint;
-			
-			for(int i = 0; i < size; i++) {
-				for(int j = 0; j < size; j++) {
-					Color color;
-					
-					if((i % 2 == 0 && j % 2 == 0) || 
-						(i % 2 == 1 && j % 2 == 1)) {
-					
-					  color = Color(1.0, 1.0, 1.0);
-					
-					} else {
-						color = Color(0.5, 0.5, 0.5);
-					}
-					
-					c.drawRectangle(visualizer.Point(i * 64 + 10, j * 64 + 10), Size(64, 64),
-						Color(0.0, 0.0, 0.0), color);
-					
-					auto turnNum = kdFrameData.board._tiles[i][j];
-					
-					if(turnNum < frameNum) {
-						c.drawLine(visualizer.Point(i * 64 + 14, j * 64  + 14), 
-							visualizer.Point((i + 1) * 64 + 6, (j + 1) * 64 + 6),
-							Color(0.7, 0.0, 0.0), 4.0);
-						c.drawLine(visualizer.Point(i * 64 + 14, (j + 1) * 64  + 6), 
-							visualizer.Point((i + 1) * 64 + 6, j * 64 + 14),
-							Color(0.7, 0.0, 0.0), 4.0);
-						if(turnNum == frameNum - 1) {
-							prevPoint = new Point(i, j);
-						}
-					} else if(turnNum == frameNum) {
-						c.drawCircle(visualizer.Point(i * 64 + 14, j * 64 + 14),
-							visualizer.Point((i + 1) * 64 + 6, (j + 1) * 64 + 6),
-							Color(0.0, 0.0, 0.0),
-							Color(0.0, 0.0, 0.7));
-						
-						thisPoint = new Point(i, j);
-					}
-				}
-			}
-		}
-	}
 
-	public:
-	
-	this(int size) {
-		_size = size;
-		_tiles = new int[][](size, size);
-		
-		_perms = [ new Point(-1, -2), new Point(+1, -2), 
-		           new Point(+2, -1), new Point(+2, +1),
-							 new Point(+1, +2), new Point(-1, +2),
-							 new Point(-2, -1), new Point(-2, +1) ];
-	}
-	
-	bool tour(Point start) {
-		return visit(1, start, movesFrom(1, start));
+		c.drawRectangle(ul, lr, Color(0.0, 0.0, 0.0), color);
+					
+		if(turnNum < frameNum && turnNum != 1) {
+			c.drawLine(ul + new Point(4, 4), lr - new Point(4, 4),
+				Color(0.7, 0.0, 0.0), 4.0);
+			c.drawLine(ul + new Point(vizScale - 4, 4), lr - new Point(vizScale - 4, 4),
+				Color(0.7, 0.0, 0.0), 4.0);
+		} else if(turnNum == frameNum || (turnNum == 1 && frameNum == (size.width * size.height + 1))) {
+			c.drawCircle(ul + new Point(4, 4), lr - new Point(4, 4),
+				Color(0.0, 0.0, 0.0), Color(0.0, 0.0, 0.7));
+		}		
 	}
 }
 
@@ -192,9 +126,10 @@ void main() {
 	int startX;
 	int startY;
 	
+	writef("Enter board size then start x then start y: ");
 	scanf("%d %d %d", &boardSize, &startX, &startY);
 	
-	if(!(new Board(boardSize)).tour(new Point(startX, startY))) {
-		writefln("No solution found!");
-	}
+	auto board = new ChessBoard(boardSize, new Point(startX, startY));
+	board.search(board.start);
+	board.visualize();
 }
