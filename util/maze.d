@@ -35,13 +35,13 @@ class Maze {
 	/++
 	 + Constructor
 	 +/
-	this(Size size, Point start, Point goal, Point[] relativeMoves, string title = "Maze", int numFrames = 1, int frameSpeed = 1000) {
+	this(Size size, Point start, Point goal, Point[] relativeMoves, string title = "Maze", int frameSpeed = 1000) {
 		this.relativeMoves = relativeMoves;
 		_size = size;
 		_start = start;
 		_goal = goal;
 		tiles = new int[][](size.iwidth, size.iheight);
-		_numFrames = numFrames;
+		_numFrames = 1;
 		_title = title;
 		_frameSpeed = frameSpeed;
 	}
@@ -114,6 +114,13 @@ class Maze {
 			}
 		}
 		return res;
+	}
+	
+	/++
+	 + Returns true if p is within the boundaries of the maze, or false if not
+	 +/
+	bool inBounds(Point p) {
+		return p.x >= 0 && p.x < size.width && p.y >= 0 && p.y < size.height;
 	}
 	
 	/++

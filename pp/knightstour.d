@@ -21,11 +21,15 @@ class ChessBoard: Maze {
         new Point(+2, -1), new Point(+2, +1),
 				new Point(+1, +2), new Point(-1, +2),
 				new Point(-2, -1), new Point(-2, +1) ],
-			"Knights Tour", size * size + 2, 1000);
+			"Knights Tour", 1000);
 	}
 	
 	int finalTurn() {
 		return size.iwidth * size.iheight;
+	}
+	
+	override int numFrames() {
+		return size.iwidth * size.iheight + 2;
 	}
 	
 	override bool solved(Point p) {
@@ -33,8 +37,7 @@ class ChessBoard: Maze {
 	}
 	
 	override bool visitable(Point p) {
-		return p.x >= 0 && p.x < size.width &&
-		       p.y >= 0 && p.y < size.height &&
+		return inBounds(p) &&
 					 (tileAt(p) == 0 || (p == start && curTurn == finalTurn));
 	}
 	
