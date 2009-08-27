@@ -137,6 +137,16 @@ enum Operator {
 	Saturate   /// Assumes source and dest are disjoint
 }
 
+struct TextExtents {
+	double xBearing;
+	double yBearing;
+	double width;
+	double height;
+	double xAdvance;
+	double yAdvance;
+};
+
+
 /++
  + All drawing operations are performed via the canvas.  The canvas uses logical coordinates to simplify
  + scaling the image.  By default the logical size is 100x100, with (0, 0) being the center of the screen.  
@@ -417,7 +427,18 @@ class Canvas {
 	 +/
 	void cairoStrokePreserve() {
 		cairo_stroke_preserve(_cr);
-	}		
+	}
+	
+	/++
+	 + See_Also:
+	 +   http://library.gnome.org/devel/cairo/stable/cairo-text.html#cairo-text-extents
+	 +/
+	TextExtents cairoTextExtents(string str) {
+		TextExtents te;
+		cairo_text_extents(_cr, toStringz(str), &te);
+		return te;
+	}
+	
 
 	/**************************************
 	 * Higher Level Functions
@@ -646,6 +667,25 @@ class Canvas {
 		cairo_show_text(_cr, toStringz(text));
 	}
 	
+	void drawCenteredText(string text, Point ul, Point lr,
+		int size, string family = "Sans",
+		FontSlant slant = FontSlant.Normal, FontWeight weight = FontWeight.Normal,
+		Color color = Color(0.0, 0.0, 0.0, 1.0)) 
+	{
+		cairo_set_source_rgba(_cr, color.r, color.g, color.b, color.a);
+		cairo_select_font_face(_cr, toStringz(family), slant, weight);
+		cairo_set_font_size(_cr, scaleScalar(size));
+		
+		auto iul = logicalToImage(ul);
+		auto ilr = logicalToImage(lr);
+		auto extents = cairoTextExtents(text);
+		auto textSize = new Size(ilr.x - iul.x, ilr.y - iul.y);
+		auto gapSize = new Size((textSize.width - (extents.width)) / 2.0, (textSize.height - (extents.height)) / 2.0);
+		auto offset = new Point(iul.x + gapSize.width - extents.xBearing, iul.y + gapSize.height - extents.yBearing);
+		cairo_move_to(_cr, offset.x, offset.y);
+		cairo_show_text(_cr, toStringz(text));
+	}
+	
 	/++
 	 + Fills the canvas with a solid color.
 	 +
@@ -852,4 +892,5 @@ extern(C) {
 	void cairo_show_text(cairo_t, char *);
 	void cairo_stroke(cairo_t);
 	void cairo_stroke_preserve(cairo_t);
+	void cairo_text_extents(cairo_t, char *, TextExtents*);
 }

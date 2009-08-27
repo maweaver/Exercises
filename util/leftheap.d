@@ -67,11 +67,7 @@ class LeftHeap(T) {
 	 + Returns the next data element
 	 +/
 	T peek() {
-		if(root) {
-			return root.data;
-		} else {
-			return null;
-		}
+		return root.data;
 	}
 	
 	/++
@@ -89,17 +85,13 @@ class LeftHeap(T) {
 	 + Returns the next data, or null if there is none
 	 +/
 	T poll() {
-		if(root) {
-			auto data = root.data;
-			if(root.left) {
-				root = root.left.merge(minHeap, root.right);
-			} else {
-				root = root.right;
-			}
-			return data;
+		auto data = root.data;
+		if(root.left) {
+			root = root.left.merge(minHeap, root.right);
 		} else {
-			return null;
+			root = root.right;
 		}
+		return data;
 	}
 	
 	/++

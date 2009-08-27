@@ -2,9 +2,15 @@ module util.maze;
 
 import std.stdio;
 
-import util.point;
+import util.queue;
 import util.size;
+import util.stack;
 import util.visualizer;
+
+struct Point {
+	int x;
+	int y;
+}
 
 /++
  + A maze is a generalized 2-d grid used for a variety of search problems.  Each
@@ -30,6 +36,12 @@ class Maze {
 	int vizScale = 64;
 	int vizBorder = 10;
 
+	int UNVISITED = 0;
+	int VISITED = -1;
+	int OBSTACLE = -2;
+
+	Stack!(Point) moves;
+	
 	public:
 	
 	/++
@@ -44,6 +56,7 @@ class Maze {
 		_numFrames = 1;
 		_title = title;
 		_frameSpeed = frameSpeed;
+		moves = new Stack!(Point)(size.iwidth * size.iheight);
 	}
 	
 	/++
@@ -92,14 +105,14 @@ class Maze {
 	 + Returns the value of the tile at the given location
 	 +/
 	int tileAt(Point p) {
-		return tiles[p.ix][p.iy];
+		return tiles[p.x][p.y];
 	}
 	
 	/++
 	 + Modifies the value of the tile at the given location
 	 +/
 	void setTile(Point p, int val) {
-		tiles[p.ix][p.iy] = val;
+		tiles[p.x][p.y] = val;
 	}
 	
 	/++
@@ -108,7 +121,7 @@ class Maze {
 	Point[] movesFrom(Point p) {
 		Point[] res;
 		foreach(move; relativeMoves) {
-			auto p2 = p + move;
+			auto p2 = Point(p.x + move.x, p.y + move.y);
 			if(visitable(p2)) {
 				res ~= p2;
 			}
@@ -136,7 +149,7 @@ class Maze {
 	abstract bool visitable(Point p);
 	
 	/++
-	 + The search operator determines which points are adjacent to p
+	 + The search operator determines the points to move to from p, or [] if there is no such move
 	 +/
 	abstract Point[] searchOperator(Point p);
 	
@@ -144,11 +157,6 @@ class Maze {
 	 + Visits the given point
 	 +/
 	abstract void visit(Point p);
-	
-	/++
-	 + Unvisits the given point
-	 +/
-	abstract void unvisit(Point p);
 	
 	/++
 	 + Do any drawing before the frame is drawing
@@ -165,27 +173,123 @@ class Maze {
 	 +/
 	abstract void drawTile(Canvas c, Point p, Point ul, Point lr, int frameNum);
 	
-	/++
-	 + Performs the actual search
-	 +/
-	Point search(Point p) {
+	Point depthSearchRecursive(Point p) {
+		moves.push(p);
+		
+		visit(p);
 		if(solved(p)) {
 			return p;
-		} else {
-			
-			visit(p);
-			
-			foreach(nextP; searchOperator(p)) {
-				auto found = search(nextP);
-					
-				if(found) {
-					return found;
+		}
+		
+		foreach(m; searchOperator(p)) {
+			if(visitable(m)) {
+				auto ret = depthSearchRecursive(m);
+				if(ret.x == -1 && ret.y == -1) {
+					return ret;
 				}
 			}
+		}
+		
+		moves.pop();
+		
+		return Point(-1, -1);
+	}
+	
+	/++
+	 + Performs a depth-first search using an explicit stack
+	 +/
+	Point depthSearch(Point start) {
+		moves.push(start);
+		visit(start);
+		
+		while(!moves.isEmpty) {
+			auto p = moves.peek();
+			visit(p);
 			
-			unvisit(p);
+			if(solved(p)) {
+				return p;
+			} else {
+				auto next = searchOperator(p);
+				if(next.length > 0) {
+					moves.push(next[0]);
+				} else {
+					moves.pop();
+				}
+			}
+		}
+		
+		return Point(-1, -1);
+	}
+	
+	/++
+	 + Performs a breadth-first search using an explicit stack
+	 +/
+	Point breadthSearch(Point start) {
+		auto predecessors = new Point[][](size.iwidth, size.iheight);
+		auto movesQueue = new Queue!(Point)();
+		
+		movesQueue.push(start);
+		
+		while(!movesQueue.isEmpty) {
+			auto thisMove = movesQueue.pop();
+			// Rebuild the moves array for each time
+/*			moves = new Stack!(Point)();
+			auto curMove = thisMove;
+			do {
+				moves.push(curMove);
+				curMove = predecessors[curMove.x][curMove.y];
+			} while(curMove.x != 0 && curMove.y != 0);*/
+			visit(thisMove);
+			if(solved(thisMove)) {
+				return thisMove;
+			}
 			
-			return null;
+			foreach(nextMove; searchOperator(thisMove)) {
+				if(predecessors[nextMove.x][nextMove.y].x == 0) {
+					predecessors[nextMove.x][nextMove.y] = thisMove;
+				
+					movesQueue.push(nextMove);
+				}
+			}
+		}
+		
+		return Point(-1, -1);
+	}
+	
+	Point breadthSearchRecursive(Point start) {
+		auto startPath = new Stack!(Point)();
+		startPath.push(start);
+		return breadthSearchRecursiveStep([ BreadthSearchInfo(start, startPath) ]);
+	}
+	
+	static struct BreadthSearchInfo {
+		Point p;
+		Stack!(Point) path;
+	}
+	
+	Point breadthSearchRecursiveStep(BreadthSearchInfo[] infos) {
+		BreadthSearchInfo[] nextStep;
+		
+		foreach(info; infos) {
+			moves = info.path;
+			auto p = info.p;
+			visit(p);
+			if(solved(p)) {
+				return p;
+			} else {
+				auto next = searchOperator(p);
+				foreach(n; next) {
+					auto nextMoves = new Stack!(Point)(moves);
+					nextMoves.push(n);
+					nextStep ~= BreadthSearchInfo(n, nextMoves);
+				}
+			}
+		}
+		
+		if(nextStep.length == 0) {
+			return Point(-1, -1);
+		} else {
+			return breadthSearchRecursiveStep(nextStep);
 		}
 	}
 	
@@ -215,9 +319,9 @@ class Maze {
 			
 			for(int x = 0; x < size.iwidth; x++) {
 				for(int y = 0; y < size.iheight; y++) {
-					mazeFrameData.maze.drawTile(c, new Point(x, y),
-						new Point(x * vizScale + vizBorder, y * vizScale + vizBorder),
-						new Point((x + 1) * vizScale + vizBorder, (y + 1) * vizScale + vizBorder),
+					mazeFrameData.maze.drawTile(c, Point(x, y),
+						Point(x * vizScale + vizBorder, y * vizScale + vizBorder),
+						Point((x + 1) * vizScale + vizBorder, (y + 1) * vizScale + vizBorder),
 						frameNum);
 				}
 			}
