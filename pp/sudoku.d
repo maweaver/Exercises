@@ -127,6 +127,10 @@ class Dlx {
 			}
 			c = c.r;
 		}
+		
+		if(first) {
+			first.l = l;
+		}
 	}
 	
 	/++
@@ -135,6 +139,34 @@ class Dlx {
 	Dlx opCat(int[] cols) {
 		addRow(cols);
 		return this;
+	}
+	
+	/++
+	 + Uncovers the given column, restoring the column and all the rows attached to it.
+	 +/
+	DlxNode uncover(DlxNode c) {
+		
+	}
+	
+	/++
+	 + Covers the given column.  Removes the given column, and all rows with a 1 in that column.  Returns the
+	 + column, so that it can be uncovered later.
+	 +/
+	DlxNode cover(DlxNode c) {
+		c.r.l = c.l;
+		c.l.r = c.r;
+		
+		for(auto row = c.d; row != c; row = row.d) {
+			auto cell = row;
+			do {
+				cell.u.d = cell.d;
+				cell.d.u = cell.u;
+				cell = cell.r;
+			} while(cell != row);
+
+			row.r.l = row.l;
+			row.l.r = row.r;
+		}
 	}
 
 	/++
@@ -306,5 +338,7 @@ void main() {
 		        [ 0,   1,   0,   0,   0,   0,   1  ] ~
 		        [ 0,   0,   0,   1,   1,   0,   1  ];
 
+	dlx.cover(0);
+	
 	writefln("%s", dlx.toString());
 }
