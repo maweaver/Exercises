@@ -43,6 +43,50 @@ class DlxNode {
 }
 
 /++
+ + A singly-linked list, used to return the results.  The results of searching
+ + is a set of rows whose 1's make up a cover of all columns.
+ +/
+class DlxResult {
+	/++
+	 + Constructor
+	 +/
+	this(DlxNode r, DlxResult n) {
+		this.r = r;
+		this.n = n;
+	}
+	
+	DlxNode r;     /// The row of this result
+	DlxResult n;   /// The next row in the set.
+	
+	/++
+	 + String representation of the result.  This looks something like:
+	 +
+	 +   { A D } { B G } { E F C }
+	 +
+	 + This means there are three rows in the result, one of which had 1's in
+	 + columns A and D, one of which had 1's in columns B and G, and one of
+	 + which had ones in columns E, F, and C.  It is clear that these rows form
+	 + a cover set of { A B C D E F G }
+	 +/
+	char[] toString() {
+		string res = "{ ";
+		
+		auto cell = r;
+		do {
+			res ~= cell.c.n ~ " ";
+			cell = cell.r;
+		} while(cell != r);
+		
+		res ~= "} ";
+		if(n) {
+			res ~= n.toString;
+		}
+		
+		return res;
+	}
+}
+
+/++
  + Class implementing the DLX algorithm.
  +/
 class Dlx {
@@ -76,7 +120,191 @@ class Dlx {
 		}
 		return offset;
 	}
+	
+	/++
+	 + Returns the column at the given offset from h.  The first column to the
+	 + right of h has an offset of 1, the second 2, etc.  (An offset of 0 will
+	 + return h).
+	 +/
+	DlxNode colAt(int offset) {
+		auto c = h;
+		for(int k = 0; k < offset; k++) {
+			c = c.r;
+		}
+		return c;
+	}
+	
+	/++
+	 + Returns the column with the lowest S, i.e., the one with the least number
+	 + of 1's in it.
+	 +/
+	DlxNode minCol() {
+		DlxNode min = null;
+		for(auto c = h.r; c != h; c = c.r) {
+			if(!min || c.s < min.s) {
+				min = c;
+			}
+		}
+		return min;
+	}
 
+	/++
+	 + Covers the given column.  Removes the given column, and all rows with a 1 in that column.  Returns the
+	 + column, so that it can be uncovered later.
+	 +/
+	DlxNode cover(DlxNode c) {
+		c.r.l = c.l;
+		c.l.r = c.r;
+		
+		for(auto row = c.d; row != c; row = row.d) {
+			for(auto cell = row.r; cell != row; cell = cell.r) {
+				cell.u.d = cell.d;
+				cell.d.u = cell.u;
+				cell.c.s--;
+			}
+		}
+		
+		return c;
+	}
+
+	/++
+	 + Uncovers the given column, restoring the column and all the rows attached to it.
+	 +/
+	void uncover(DlxNode c) {
+		c.r.l = c;
+		c.l.r = c;
+		
+		for(auto row = c.d; row != c; row = row.d) {
+			row.r.l = row;
+			row.l.r = row;
+			
+			for(auto cell = row.r; cell != row; cell = cell.r) {
+				cell.u.d = cell;
+				cell.d.u = cell;
+				cell.c.s++;
+			}
+		}
+	}
+	
+	/++
+	 + Actual implementation of the search algorithm.  Calls itself recursively.
+	 +/
+	DlxResult[] search(DlxResult res, bool enumerate) {
+		if(h.r == h) {
+			return [ res ];
+		}
+		
+		DlxResult[] all;
+		auto c = cover(minCol());
+		for(auto r = c.d; r != c; r = r.d) {
+			
+			for(auto j = r.r; j != r; j = j.r) {
+				cover(j.c);
+			}
+
+			foreach(result; search(new DlxResult(r, res), enumerate)) {
+				all ~= result;
+			}
+			
+			for(auto j = r.r; j != r; j = j.r) {
+				uncover(j.c);
+			}
+			
+			if(all.length > 0 && !enumerate) {
+				// Break out early if not enumerating
+				break;
+			}
+		}
+		
+		uncover(c);
+		
+		return all;
+	}
+
+  /++ 	
+	 + Uses the following algorithm to find a row using the given spec
+	 +
+	 +   - Start at h
+	 +   - Move right for each entry in the spec array
+	 +     - When you encounter a 1, for the first time, build an array of all 
+	 +       cells in that column
+	 +     - For subsequent 1's, set the cell array to all cells whose l is in the 
+	 +       original cell array
+	 +   - For each row in this set, find the cell whose column to the right is
+	 +     the first one that had a 1 originally.
+	 +/
+	DlxNode findRow(int[] spec) {
+		DlxNode[] possibleCells;
+		DlxNode firstCol = null;
+		auto col = h;
+		foreach(r; spec) {
+			col = col.r;
+			
+			if(r != 0) {
+				if(!firstCol) {
+					for(auto cell = col.d; cell != col; cell = cell.d) {
+						possibleCells ~= cell;
+					}
+					firstCol = col;
+				} else {
+					DlxNode[] newPossibleCells;
+					for(auto cell = col.d; cell != col; cell = cell.d) {
+						foreach(p; possibleCells) {
+							if(cell.l == p) {
+								newPossibleCells ~= cell;
+							}
+						}
+					}
+					possibleCells = newPossibleCells;
+				}
+			}
+		}
+		
+		foreach(cell; possibleCells) {
+			if(cell.r.c == firstCol) {
+				return cell;
+			}
+		}
+		
+		return null;
+	}
+
+	/++
+	 + The non-recursive portion of searching.  Nicer interfaces to this method
+	 + are provided via search() and enumerate().
+	 +/
+	DlxResult[] search(int[][] constraints, bool enumerate) {
+		DlxNode[] initiallycovered;
+		DlxResult res = null;
+		
+		foreach(constraint; constraints) {
+			auto row = findRow(constraint);
+			if(row) {
+				res = new DlxResult(row, res);
+
+				auto cell = row;
+				do {
+					initiallycovered ~= cell.c;
+					cell = cell.r;
+				} while(cell != row);		
+			} else {
+				writefln("No matching row found for constraint!");
+			}
+		}
+		
+		foreach(covered; initiallycovered) {
+			cover(covered);
+		}
+		
+		auto ans = search(res, enumerate);
+		
+		foreach(covered; initiallycovered) {
+			uncover(covered);
+		}
+		
+		return ans;
+	}
+	
 	public:
 	
 	/++
@@ -142,33 +370,24 @@ class Dlx {
 	}
 	
 	/++
-	 + Uncovers the given column, restoring the column and all the rows attached to it.
+	 + Searches for a cover set of this matrix, and returns the first one found.
 	 +/
-	DlxNode uncover(DlxNode c) {
-		
+	DlxResult search(int[][] constraints = [ ]) {
+		auto res = search(constraints, false);
+		if(res.length > 0) {
+			return res[0];
+		} else {
+			return null;
+		}
 	}
 	
 	/++
-	 + Covers the given column.  Removes the given column, and all rows with a 1 in that column.  Returns the
-	 + column, so that it can be uncovered later.
+	 + Discovers all cover sets of this matrix, and returns them in an array.
 	 +/
-	DlxNode cover(DlxNode c) {
-		c.r.l = c.l;
-		c.l.r = c.r;
-		
-		for(auto row = c.d; row != c; row = row.d) {
-			auto cell = row;
-			do {
-				cell.u.d = cell.d;
-				cell.d.u = cell.u;
-				cell = cell.r;
-			} while(cell != row);
-
-			row.r.l = row.l;
-			row.l.r = row.r;
-		}
+	DlxResult[] enumerate(int[][] constraints = [ ]) {
+		return search(constraints, true);
 	}
-
+	
 	/++
 	 + Returns a pretty-print of the dancing-links data structure, which can be
 	 + transformed into a graphic representation using graphviz's neato tool.
@@ -271,7 +490,7 @@ class Dlx {
 		int currow = 1;
 		for(auto col = h.r, curcol = 1; col != h; col = col.r, curcol++) {
 			
-			nodes[col] = GraphNode(curcol, 0, col.n, [
+			nodes[col] = GraphNode(curcol, 0, format("%s [%d]", col.n, col.s), [
 				col.l.toHash,
 				col.r == h ? 0 : col.r.toHash,
 				col.d == col ? 0 : col.d.toHash]);
@@ -295,18 +514,19 @@ class Dlx {
 		
 		// Rearrange the rows
 		
-		for(auto col = h.r, curcol = 1; col != h; col = col.r, curcol++) {
+		auto col = h.r;
+		while(col != h) {
 			for(auto row = col.d; row != col; row = row.d) {
+				auto upy = nodes[row.u].y;
+				auto y = nodes[row].y;
 				
-				auto upRowY = nodes[row.u].y;
-				auto rowY = nodes[row].y;
-				
-				if(rowY > upRowY) {
-					switchRows(rowY, upRowY);
-					col = h.r;
+				if(y > upy) {
+					switchRows(y, upy);
+					col = h;
 					break;
 				}
 			}
+			col = col.r;
 		}
 		
 		// Build the final graph string
@@ -325,10 +545,212 @@ class Dlx {
 		res ~= "}";
 		return res;
 	}
+}
+
+/++
+ + A sudoku solver which uses the Dlx algorithm.  The idea is to transform a
+ + sudoku puzzle into a matrix so that each unique cover of the matrix 
+ + represents a solution to the puzzle.
+ +
+ + We create the matrix by creating a column for each constraints.  For example,
+ + each number 1-9 has to occur exactly once in row 1, so we add a column R11,
+ + R12, ... R19 to represent this constraints.  Similarly for columns 1-9 and
+ + groups 1-9.
+ +
+ + We create an entry for each row-column-number combination.  The group value
+ + is dependent on the combination of row and column. The final size of this 
+ + matrix is 243 x 729.
+ +
+ + It is easy to see that each cover set to this matrix is a solution to an
+ + unconstrained sudoku problem.
+ +
+ + To solve a specific problem, we cover each column with a '1' in the row 
+ + representing the given number.  For example, if we are given that row 1 
+ + column 2 has a value 3, we know that we have accounted for R13, C23, and G13.
+ + Those columns, and any rows that have a 1 in that column, can be removed.
+ +
+ + This reduces the size of the matrix and gives a partial solution 
+ + corresponding to those rows.  The result is then a cover set of the remaining
+ + matrix.
+ +/
+class SudokuSolver {
+	protected:
 	
+	Dlx dlx;
+	
+	/++
+	 + Returns the offset of the row-column combo r-c
+	 +/
+	int offsetRc(int r, int c) {
+		return 9 * 9 * 0 + r * 9 + c;
+	}
+	
+	/++
+	 + Returns the offset of the column for row r number n
+	 +/
+	int offsetR(int r, int n) {
+		return 9 * 9 * 1 + r * 9 + n;
+	}
+	
+	/++
+	 + Returns the offset of the column for col c number n
+	 +/	
+	int offsetC(int c, int n) {
+		return 9 * 9 * 2 + c * 9 + n;
+	}
+	
+	/++
+	 + Returns the offset of the column for group g number n
+	 +/
+	int offsetG(int g, int n) {
+		return 9 * 9 * 3 + g * 9 + n;
+	}
+	
+	/++
+	 + Returns the group number of the given row-column combo
+	 +/
+	int groupOf(int r, int c) {
+		return (r / 3) * 3 + (c / 3);
+	}
+	
+	public:
+	
+	/++
+	 + Constructor.  Generates the DLX matrix (an expensive operation) once, so
+	 + that it can be reused to solve many puzzles quickly.
+	 +/
+	this() {
+		// Build the columns.  These should relate to the mathematical relationship
+		string[9 * 9 * 4] columns;
+		for(int row = 0; row < 9; row++) {
+			for(int n = 0; n < 9; n++) {
+				columns[offsetR(row, n)] = format("R%d%d", row + 1, n + 1);
+			}
+			
+			for(int col = 0; col < 9; col++) {
+				columns[offsetRc(row, col)]  = format("RC%d%d", row + 1, col + 1);
+				for(int n = 0; n < 9; n++) {
+					columns[offsetC(col, n)] = format("C%d%d", col + 1, n + 1);
+					columns[offsetG(groupOf(row, col), n)] = format("G%d%d", groupOf(row, col) + 1, n + 1);
+				}
+			}
+		}
+	
+		dlx = new Dlx(columns);
+	
+		// Build a row for each row-col-num combo
+	
+		for(int row = 0; row < 9; row++) {
+			for(int col = 0; col < 9; col++) {
+				for(int n = 0; n < 9; n++) {
+					int[(9 * 9) * 4] values;
+					values[offsetRc(row, col)] = 1;
+					values[offsetR(row, n)] = 1;
+					values[offsetC(col, n)] = 1;
+					values[offsetG(groupOf(row, col), n)] = 1;
+					dlx.addRow(values);
+				}
+			}
+		}
+	}
+	
+	/++
+	 + Solves the given puzzle.  Puzzles are given as an 81-character string of
+	 + characters.  Characters '1' - '9' in a given spot means that that location
+	 + is locked to the given number.  Any other number or character means that
+	 + the given location is free.
+	 +/
+	string solve(string puzzle) {
+		assert(puzzle.length == 81);
+		
+		string res;
+		res.length = 81;
+		
+		// Build constraints for the input puzzle
+		int[][] constraints;
+		foreach(idx, ch; puzzle) {
+			int row = idx / 9;
+			int col = idx % 9;
+			int val = ch - '0';
+			if(val < 1 || val > 9) {
+				val = 0;
+			}
+			
+			if(val != 0) {
+				auto constraint = new int[9 * 9 * 4];
+				
+				constraint[offsetRc(row, col)] = 1;
+				constraint[offsetR(row, val - 1)] = 1;
+				constraint[offsetC(col, val - 1)] = 1;
+				constraint[offsetG(groupOf(row, col), val - 1)] = 1;
+				
+				constraints ~= constraint;
+			}
+		}
+		
+		auto ans = dlx.search(constraints);
+		if(ans) {
+			while(ans) {
+				int row;
+				int col;
+				int val;
+				
+				auto cell = ans.r;
+				do {
+					if(cell.c.n.length == 4) {
+						row = cell.c.n[2] - '0';
+						col = cell.c.n[3] - '0';
+					} else if(cell.c.n[0] == 'C') {
+						val = cell.c.n[2];
+					}
+					
+					cell = cell.r;
+				} while(cell != ans.r)
+				
+				res[(row - 1) * 9 + (col - 1)] = val;
+				ans = ans.n;
+			}
+		} else {
+			writefln("No answer found");
+		}
+	
+		return res;
+	}
+	
+	/++
+	 + Takes a packed string representing a puzzle and prints it formatted nicely to standard out
+	 +/
+	void prettyPrint(string puzzle) {
+		for(auto row = 0; row < 9; row++) {
+			for(auto col= 0; col < 9; col++) {
+				auto val = puzzle[row * 9 + col];
+				if(val != '0') {
+					writef(" %s ", val);
+				} else {
+					writef(" _ ");
+				}
+				if(col < 8 && (col + 1) % 3 == 0) {
+					writef(" | ");
+				}
+			}
+			writefln();
+			if(row < 8 && (row + 1) % 3 == 0) {
+				for(int i = 0; i < (9 + 2) * 3; i++) {
+					if(i == 10 || i == 22) {
+						writef("+");
+					} else {
+						writef("-");
+					}
+				}
+				writefln();
+			}
+		}
+	}
 }
 
 void main() {
+	/*
+	// Modified (to add a second cover set) version of Knuth's sample
 	auto dlx = 
 	  new Dlx(["A", "B", "C", "D", "E", "F", "G" ]) ~
 		        [ 0,   0,   1,   0,   1,   1,   0  ] ~
@@ -336,9 +758,17 @@ void main() {
 		        [ 0,   1,   1,   0,   0,   1,   0  ] ~
 		        [ 1,   0,   0,   1,   0,   0,   0  ] ~
 		        [ 0,   1,   0,   0,   0,   0,   1  ] ~
-		        [ 0,   0,   0,   1,   1,   0,   1  ];
-
-	dlx.cover(0);
+		        [ 0,   0,   0,   1,   1,   0,   1  ] ~
+						[ 1,   1,   1,   0,   0,   1,   0  ];
 	
-	writefln("%s", dlx.toString());
+	// Find all solutions which include the row with a 1 in columns D and A
+	foreach(ans; dlx.enumerate([ [ 1, 0, 0, 1, 0, 0, 0 ] ])) {
+		writefln("%s", ans);
+	}
+	*/
+	
+	auto solver = new SudokuSolver();
+	for(auto puzzle = readln(); puzzle; puzzle = readln()) {
+		writefln("%s", solver.solve(puzzle[0..81]));
+	}
 }
