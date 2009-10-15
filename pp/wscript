@@ -1,0 +1,179 @@
+#! /usr/bin/env python
+
+import Options
+
+srcdir = '.'
+blddir = 'build'
+
+def set_options(opt):
+	opt.tool_options('compiler_d')
+	opt.tool_options('compiler_cc')
+
+def configure(conf):
+	conf.check_tool('compiler_cc')
+
+	conf.env.append_value('CCFLAGS', '-ggdb')
+	conf.env.append_value('CCFLAGS', '-std=gnu99')
+	conf.env.append_value('CCFLAGS', '-Wall')
+	conf.env.append_value('CCFLAGS', '-Werror')
+	
+	gdc_env = conf.env.copy()
+	dmd_env = conf.env.copy()
+	conf.set_env_name('gdc', gdc_env)
+	conf.set_env_name('dmd', dmd_env)
+	
+	conf.setenv('gdc')
+	Options.options.check_dmd_first = 0
+	conf.check_tool('compiler_d')
+	conf.env['DFLAGS'] = [ '-g', '-B ../..' ]
+	
+	conf.setenv('dmd')
+	Options.options.check_dmd_first = 1
+	conf.check_tool('compiler_d')
+	conf.env['DFLAGS'] = [ '-g', '-I../..' ]
+	conf.env['DLINKFLAGS'] = [ '-L-L../../util/build/default' ]
+
+def build(bld):
+	bingo               =    bld.new_task_gen()
+	bingo.features      =   'd dprogram'
+	bingo.source        =   'bingo.d'
+	bingo.target        =   'bingo'
+	bingo.env           =    bld.env_of_name('gdc').copy()
+	
+	bsearch             =    bld.new_task_gen()
+	bsearch.features    =   'cc cprogram'
+	bsearch.source      =   'bsearch.c'
+	bsearch.target      =   'bsearch'
+
+	bsearch             =    bld.new_task_gen()
+	bsearch.features    =   'cc cprogram'
+	bsearch.source      =   'bsearch.c'
+	bsearch.target      =   'bsearch'
+	
+	creation             =    bld.new_task_gen()
+	creation.features    =   'cc cprogram'
+	creation.source      =   'creation.c'
+	creation.target      =   'creation'
+
+	csv                  =    bld.new_task_gen()
+	csv.features         =   'd dprogram'
+	csv.source           =   'csv.d'
+	csv.target           =   'csv'
+	csv.env              =    bld.env_of_name('dmd').copy()
+	
+	divdigit             =    bld.new_task_gen()
+	divdigit.features    =   'd dprogram'
+	divdigit.source      =   'divdigit.d'
+	divdigit.target      =   'divdigit'
+	divdigit.env         =    bld.env_of_name('dmd').copy()
+
+	doublets             =    bld.new_task_gen()
+	doublets.features    =   'd dprogram'
+	doublets.source      =   'doublets.d'
+	doublets.target      =   'doublets'
+	doublets.env         =    bld.env_of_name('dmd').copy()
+
+	dwellings            =    bld.new_task_gen()
+	dwellings.features   =   'd dprogram'
+	dwellings.source     =   'dwellings.d'
+	dwellings.target     =   'dwellings'
+	dwellings.env        =    bld.env_of_name('dmd').copy()
+	
+	ellipticfac          =    bld.new_task_gen()
+	ellipticfac.features =   'd dprogram'
+	ellipticfac.source   =   'ellipticfac.d'
+	ellipticfac.target   =   'ellipticfac'
+	ellipticfac.libs     =   'utils'
+	ellipticfac.env      =    bld.env_of_name('dmd').copy()
+
+	fri13                =    bld.new_task_gen()
+	fri13.features       =   'cc cprogram'
+	fri13.source         =   'fri13.c'
+	fri13.target         =   'fri13'
+	
+	josephus             =    bld.new_task_gen()
+	josephus.features    =   'd dprogram'
+	josephus.source      =   'josephus.d'
+	josephus.target      =   'josephus'
+	josephus.env         =    bld.env_of_name('dmd').copy()
+
+	knightstour          =    bld.new_task_gen()
+	knightstour.features =   'd dprogram'
+	knightstour.source   =   'knightstour.d'
+	knightstour.target   =   'knightstour'
+	knightstour.libs     =    [ 'utils', 'gtk-x11-2.0', 'cairo' ]
+	knightstour.env      =    bld.env_of_name('dmd').copy()
+
+	lockers              =    bld.new_task_gen()
+	lockers.features     =   'd dprogram'
+	lockers.source       =   'lockers.d'
+	lockers.target       =   'lockers'
+	lockers.env          =    bld.env_of_name('dmd').copy()
+
+	mardigras            =    bld.new_task_gen()
+	mardigras.features   =   'cc cprogram'
+	mardigras.source     =   'mardigras.c'
+	mardigras.target     =   'mardigras'
+
+	markov               =    bld.new_task_gen()
+	markov.features      =   'd dprogram'
+	markov.source        =   'markov.d'
+	markov.target        =   'markov'
+	markov.env           =    bld.env_of_name('dmd').copy()
+
+	pi                   =    bld.new_task_gen()
+	pi.features          =   'cc cprogram'
+	pi.source            =   'pi.c'
+	pi.target            =   'pi'
+	pi.libs              =   'm'
+
+	quine                =    bld.new_task_gen()
+	quine.features       =   'cc cprogram'
+	quine.source         =   'quine.c'
+	quine.target         =   'quine'
+	quine.libs           =   'm'
+	quine.env            =    bld.env_of_name('default').copy()
+	quine.env['CCFLAGS'] =    ['-Wno-implicit']
+
+	revpol               =    bld.new_task_gen()
+	revpol.features      =   'd dprogram'
+	revpol.source        =   'revpol.d'
+	revpol.target        =   'revpol'
+	revpol.libs          =   'utils'
+	revpol.env           =    bld.env_of_name('dmd').copy()
+
+	roman                =    bld.new_task_gen()
+	roman.features       =   'd dprogram'
+	roman.source         =   'roman.d'
+	roman.target         =   'roman'
+	roman.env            =    bld.env_of_name('dmd').copy()
+
+	rot13                =    bld.new_task_gen()
+	rot13.features       =   'd dprogram'
+	rot13.source         =   'rot13.d'
+	rot13.target         =   'rot13'
+	rot13.env            =    bld.env_of_name('dmd').copy()
+
+	russianPeasant          =    bld.new_task_gen()
+	russianPeasant.features =   'd dprogram'
+	russianPeasant.source   =   'russianPeasant.d'
+	russianPeasant.target   =   'russianPeasant'
+	russianPeasant.env      =    bld.env_of_name('dmd').copy()
+	
+	sieve                =    bld.new_task_gen()
+	sieve.features       =   'd dprogram'
+	sieve.source         =   'sieve.d'
+	sieve.target         =   'sieve'
+	sieve.env            =    bld.env_of_name('dmd').copy()
+
+	stringsearch          =    bld.new_task_gen()
+	stringsearch.features =   'd dprogram'
+	stringsearch.source   =   'stringsearch.d'
+	stringsearch.target   =   'stringsearch'
+	stringsearch.env      =    bld.env_of_name('dmd').copy()
+
+	sudoku               =    bld.new_task_gen()
+	sudoku.features      =   'd dprogram'
+	sudoku.source        =   'sudoku.d'
+	sudoku.target        =   'sudoku'
+	sudoku.env           =    bld.env_of_name('gdc').copy()

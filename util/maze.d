@@ -2,15 +2,11 @@ module util.maze;
 
 import std.stdio;
 
+import util.point;
 import util.queue;
 import util.size;
 import util.stack;
 import util.visualizer;
-
-struct Point {
-	int x;
-	int y;
-}
 
 /++
  + A maze is a generalized 2-d grid used for a variety of search problems.  Each
@@ -105,14 +101,14 @@ class Maze {
 	 + Returns the value of the tile at the given location
 	 +/
 	int tileAt(Point p) {
-		return tiles[p.x][p.y];
+		return tiles[p.ix][p.iy];
 	}
 	
 	/++
 	 + Modifies the value of the tile at the given location
 	 +/
 	void setTile(Point p, int val) {
-		tiles[p.x][p.y] = val;
+		tiles[p.ix][p.iy] = val;
 	}
 	
 	/++
@@ -121,7 +117,7 @@ class Maze {
 	Point[] movesFrom(Point p) {
 		Point[] res;
 		foreach(move; relativeMoves) {
-			auto p2 = Point(p.x + move.x, p.y + move.y);
+			auto p2 = p + move;
 			if(visitable(p2)) {
 				res ~= p2;
 			}
@@ -159,6 +155,11 @@ class Maze {
 	abstract void visit(Point p);
 	
 	/++
+	 + Unvisits the given point
+	 +/
+	abstract void unvisit(Point p);
+	
+	/++
 	 + Do any drawing before the frame is drawing
 	 +/
 	abstract void preDrawFrame(Canvas c, int frameNum);
@@ -190,9 +191,10 @@ class Maze {
 			}
 		}
 		
+		unvisit(p);
 		moves.pop();
 		
-		return Point(-1, -1);
+		return new Point(-1, -1);
 	}
 	
 	/++
@@ -218,7 +220,7 @@ class Maze {
 			}
 		}
 		
-		return Point(-1, -1);
+		return new Point(-1, -1);
 	}
 	
 	/++
@@ -245,15 +247,15 @@ class Maze {
 			}
 			
 			foreach(nextMove; searchOperator(thisMove)) {
-				if(predecessors[nextMove.x][nextMove.y].x == 0) {
-					predecessors[nextMove.x][nextMove.y] = thisMove;
+				if(predecessors[nextMove.ix][nextMove.iy].x == 0) {
+					predecessors[nextMove.ix][nextMove.iy] = thisMove;
 				
 					movesQueue.push(nextMove);
 				}
 			}
 		}
 		
-		return Point(-1, -1);
+		return new Point(-1, -1);
 	}
 	
 	Point breadthSearchRecursive(Point start) {
@@ -287,7 +289,7 @@ class Maze {
 		}
 		
 		if(nextStep.length == 0) {
-			return Point(-1, -1);
+			return new Point(-1, -1);
 		} else {
 			return breadthSearchRecursiveStep(nextStep);
 		}
@@ -319,9 +321,9 @@ class Maze {
 			
 			for(int x = 0; x < size.iwidth; x++) {
 				for(int y = 0; y < size.iheight; y++) {
-					mazeFrameData.maze.drawTile(c, Point(x, y),
-						Point(x * vizScale + vizBorder, y * vizScale + vizBorder),
-						Point((x + 1) * vizScale + vizBorder, (y + 1) * vizScale + vizBorder),
+					mazeFrameData.maze.drawTile(c, new Point(x, y),
+						new Point(x * vizScale + vizBorder, y * vizScale + vizBorder),
+						new Point((x + 1) * vizScale + vizBorder, (y + 1) * vizScale + vizBorder),
 						frameNum);
 				}
 			}

@@ -845,12 +845,12 @@ extern(C) {
 	gpointer gtk_drawing_area_new();
 	gpointer gtk_widget_get_window(gpointer);
 	void gdk_drawable_get_size(gpointer, int*, int*);
-	void gtk_window_set_title(gpointer, char*);
+	void gtk_window_set_title(gpointer, const char*);
 	void gtk_window_set_default_size(gpointer, int, int);
 	void gtk_widget_queue_draw_area(gpointer, int, int, int, int);
 	
 	// GTK Signal Functions
-	void g_signal_connect_data(gpointer, char*, gpointer, gpointer, gpointer, int);
+	void g_signal_connect_data(gpointer, const char*, gpointer, gpointer, gpointer, int);
 	void g_timeout_add(uint, gpointer, gpointer);
 
 	// Cairo Functions
@@ -875,7 +875,7 @@ extern(C) {
 	void cairo_rectangle(cairo_t, double, double, double, double);
 	void cairo_restore(cairo_t);
 	void cairo_save(cairo_t);
-	void cairo_select_font_face(cairo_t, char*, int, int);
+	void cairo_select_font_face(cairo_t, const char*, int, int);
 	void cairo_set_antialias(cairo_t, int);
 	void cairo_set_dash(cairo_t, double*, int, int);
 	void cairo_set_fill_rule(cairo_t, int);
@@ -889,8 +889,8 @@ extern(C) {
 	void cairo_set_line_width(cairo_t, double);
 	void cairo_set_operator(cairo_t, int);
 	void cairo_set_tolerance(cairo_t, double);
-	void cairo_show_text(cairo_t, char *);
+	void cairo_show_text(cairo_t, const char *);
 	void cairo_stroke(cairo_t);
 	void cairo_stroke_preserve(cairo_t);
-	void cairo_text_extents(cairo_t, char *, TextExtents*);
+	void cairo_text_extents(cairo_t, const char *, TextExtents*);
 }

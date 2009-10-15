@@ -43,7 +43,7 @@ START   IOC  0(PRINTER)
 TITLE   ALF  FIRST
         ALF   FIVE
         ALF   HUND
-        ALF  DRED P
+        ALF  RED P
         ALF  RIMES
         ORIG BUF0+24
         CON  BUF1+10

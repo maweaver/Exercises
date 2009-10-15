@@ -1,0 +1,49 @@
+APPNAME = 'cbspt'
+
+srcdir = '.'
+blddir = 'build'
+
+def set_options(opt):
+	opt.tool_options('compiler_cc')
+
+def configure(conf):
+	conf.check_tool('compiler_cc')
+
+	conf.setenv('default')
+	conf.env.CCFLAGS = [ '-O3' ]
+	
+	env = conf.env.copy()
+	env.set_variant('debug')
+	conf.set_env_name('debug', env)
+	
+	conf.setenv('debug')
+	conf.env.CCFLAGS = [ '-O0', '-g', '-DCSBPT_DEBUG' ]
+	conf.env.LINKFLAGS = [ '-g' ]
+
+def build(bld):
+	shlib                   =    bld.new_task_gen()
+	shlib.features          =   'cc cshlib'
+	shlib.source            =   'csbpt.c'
+	shlib.target            =   'csbpt'
+
+	shlibg                  =    shlib.clone('debug')
+	shlibg.target           =    'csbptg'
+	shlibg.env              =    bld.env_of_name('debug').copy()
+	
+	stlib                   =    bld.new_task_gen()
+	stlib.features          =   'cc cstaticlib'
+	stlib.source            =   'csbpt.c'
+	stlib.target            =   'csbptst'
+	
+	stlibg                  =    stlib.clone('debug')
+	stlibg.target           =    'csbptstg'
+	stlibg.env              =    bld.env_of_name('debug').copy()
+	
+	testprog                =    bld.new_task_gen()
+	testprog.features       =   'cc cprogram'
+	testprog.source         =   'test.c'
+	testprog.target         =   'test'
+	testprog.lib            =    [ 'm' ]
+	testprog.uselib_local   =   'csbptstg'
+	testprog.includes       =   '.'
+	testprog.env            =    bld.env_of_name('debug').copy()

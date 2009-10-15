@@ -1,0 +1,30 @@
+#! /usr/bin/env python
+
+import Options
+
+srcdir = '.'
+blddir = 'build'
+
+def set_options(opt):
+	opt.tool_options('compiler_d')
+	opt.tool_options('compiler_cc')
+
+def configure(conf):
+	Options.options.check_dmd_first = 1
+	conf.check_tool('compiler_cc')
+	conf.check_tool('compiler_d')
+
+	conf.env.append_value('CCFLAGS', '-ggdb')
+	conf.env.append_value('CCFLAGS', '-std=gnu99')
+	conf.env.append_value('CCFLAGS', '-Wall')
+	conf.env.append_value('CCFLAGS', '-Werror')
+	
+	conf.env['DFLAGS'] = [ '-g' ]
+
+def build(bld):
+	utils                 =    bld.new_task_gen()
+	utils.features        =   'd dstaticlib'
+	utils.source          =   'dll.d dlx.d elliptic.d leftheap.d maze.d point.d queue.d size.d stack.d visualizer.d wrappedint.d'
+	utils.target          =   'utils'
+	utils.env             =    bld.env_of_name('dmd').copy()
+

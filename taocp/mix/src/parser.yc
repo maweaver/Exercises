@@ -1,0 +1,651 @@
+%code top {
+#define YYSTYPE mixal::AstNode*
+#define YYPARSE_PARAM statements
+}
+
+%code requires {
+#include <mixal.hh>
+#include <string.h>
+#include <vector>
+
+extern int yylex();
+}
+
+%code {
+
+extern char *yytext;
+
+void yyerror(const char *);
+
+namespace mixal {
+  extern Program prog;
+}
+
+static void add_statement(void *statements, mixal::Statement *stmt) {
+	std::vector<mixal::Statement*> *stmts = static_cast<std::vector<mixal::Statement*> *>(statements);
+	stmts->push_back(stmt);
+}
+
+}
+
+%debug
+%error-verbose
+
+%token TOKEN_ALF_STR
+%token TOKEN_LOCAL_SYMBOL_H
+%token TOKEN_LOCAL_SYMBOL_B
+%token TOKEN_LOCAL_SYMBOL_F
+%token TOKEN_IDENTIFIER
+%token TOKEN_NUMBER
+
+%token TOKEN_LPAREN
+%token TOKEN_RPAREN
+%token TOKEN_EQ
+%token TOKEN_MINUS
+%token TOKEN_PLUS
+%token TOKEN_MUL
+%token TOKEN_FRAC
+%token TOKEN_DIV
+%token TOKEN_RANGE
+%token TOKEN_COMMA
+%token TOKEN_NEWLINE
+
+%token TOKEN_OP_NOP
+%token TOKEN_OP_ADD
+%token TOKEN_OP_FADD
+%token TOKEN_OP_SUB
+%token TOKEN_OP_FSUB
+%token TOKEN_OP_MUL
+%token TOKEN_OP_FMUL
+%token TOKEN_OP_DIV
+%token TOKEN_OP_FDIV
+%token TOKEN_OP_NUM
+%token TOKEN_OP_CHAR
+%token TOKEN_OP_HLT
+%token TOKEN_OP_SLA
+%token TOKEN_OP_SRA
+%token TOKEN_OP_SLAX
+%token TOKEN_OP_SRAX
+%token TOKEN_OP_SLC
+%token TOKEN_OP_SRC
+%token TOKEN_OP_MOVE
+%token TOKEN_OP_LDA
+%token TOKEN_OP_LD1
+%token TOKEN_OP_LD2
+%token TOKEN_OP_LD3
+%token TOKEN_OP_LD4
+%token TOKEN_OP_LD5
+%token TOKEN_OP_LD6
+%token TOKEN_OP_LDX
+%token TOKEN_OP_LDAN
+%token TOKEN_OP_LD1N
+%token TOKEN_OP_LD2N
+%token TOKEN_OP_LD3N
+%token TOKEN_OP_LD4N
+%token TOKEN_OP_LD5N
+%token TOKEN_OP_LD6N
+%token TOKEN_OP_LDXN
+%token TOKEN_OP_STA
+%token TOKEN_OP_ST1
+%token TOKEN_OP_ST2
+%token TOKEN_OP_ST3
+%token TOKEN_OP_ST4
+%token TOKEN_OP_ST5
+%token TOKEN_OP_ST6
+%token TOKEN_OP_STX
+%token TOKEN_OP_STJ
+%token TOKEN_OP_STZ
+%token TOKEN_OP_JBUS
+%token TOKEN_OP_IOC
+%token TOKEN_OP_IN
+%token TOKEN_OP_OUT
+%token TOKEN_OP_JRED
+%token TOKEN_OP_JMP
+%token TOKEN_OP_JSJ
+%token TOKEN_OP_JOV
+%token TOKEN_OP_JNOV
+%token TOKEN_OP_JL
+%token TOKEN_OP_JE
+%token TOKEN_OP_JG
+%token TOKEN_OP_JGE
+%token TOKEN_OP_JNE
+%token TOKEN_OP_JLE
+%token TOKEN_OP_JAN
+%token TOKEN_OP_JAZ
+%token TOKEN_OP_JAP
+%token TOKEN_OP_JANN
+%token TOKEN_OP_JANZ
+%token TOKEN_OP_JANP
+%token TOKEN_OP_J1N
+%token TOKEN_OP_J1Z
+%token TOKEN_OP_J1P
+%token TOKEN_OP_J1NN
+%token TOKEN_OP_J1NZ
+%token TOKEN_OP_J1NP
+%token TOKEN_OP_J2N
+%token TOKEN_OP_J2Z
+%token TOKEN_OP_J2P
+%token TOKEN_OP_J2NN
+%token TOKEN_OP_J2NZ
+%token TOKEN_OP_J2NP
+%token TOKEN_OP_J3N
+%token TOKEN_OP_J3Z
+%token TOKEN_OP_J3P
+%token TOKEN_OP_J3NN
+%token TOKEN_OP_J3NZ
+%token TOKEN_OP_J3NP
+%token TOKEN_OP_J4N
+%token TOKEN_OP_J4Z
+%token TOKEN_OP_J4P
+%token TOKEN_OP_J4NN
+%token TOKEN_OP_J4NZ
+%token TOKEN_OP_J4NP
+%token TOKEN_OP_J5N
+%token TOKEN_OP_J5Z
+%token TOKEN_OP_J5P
+%token TOKEN_OP_J5NN
+%token TOKEN_OP_J5NZ
+%token TOKEN_OP_J5NP
+%token TOKEN_OP_J6N
+%token TOKEN_OP_J6Z
+%token TOKEN_OP_J6P
+%token TOKEN_OP_J6NN
+%token TOKEN_OP_J6NZ
+%token TOKEN_OP_J6NP
+%token TOKEN_OP_JXN
+%token TOKEN_OP_JXZ
+%token TOKEN_OP_JXP
+%token TOKEN_OP_JXNN
+%token TOKEN_OP_JXNZ
+%token TOKEN_OP_JXNP
+%token TOKEN_OP_INCA
+%token TOKEN_OP_DECA
+%token TOKEN_OP_ENTA
+%token TOKEN_OP_ENNA
+%token TOKEN_OP_INC1
+%token TOKEN_OP_DEC1
+%token TOKEN_OP_ENT1
+%token TOKEN_OP_ENN1
+%token TOKEN_OP_INC2
+%token TOKEN_OP_DEC2
+%token TOKEN_OP_ENT2
+%token TOKEN_OP_ENN2
+%token TOKEN_OP_INC3
+%token TOKEN_OP_DEC3
+%token TOKEN_OP_ENT3
+%token TOKEN_OP_ENN3
+%token TOKEN_OP_INC4
+%token TOKEN_OP_DEC4
+%token TOKEN_OP_ENT4
+%token TOKEN_OP_ENN4
+%token TOKEN_OP_INC5
+%token TOKEN_OP_DEC5
+%token TOKEN_OP_ENT5
+%token TOKEN_OP_ENN5
+%token TOKEN_OP_INC6
+%token TOKEN_OP_DEC6
+%token TOKEN_OP_ENT6
+%token TOKEN_OP_ENN6
+%token TOKEN_OP_INCX
+%token TOKEN_OP_DECX
+%token TOKEN_OP_ENTX
+%token TOKEN_OP_ENNX
+%token TOKEN_OP_CMPA
+%token TOKEN_OP_FCMP
+%token TOKEN_OP_CMP1
+%token TOKEN_OP_CMP2
+%token TOKEN_OP_CMP3
+%token TOKEN_OP_CMP4
+%token TOKEN_OP_CMP5
+%token TOKEN_OP_CMP6
+%token TOKEN_OP_CMPX
+
+%token TOKEN_EQU
+%token TOKEN_ORIG
+%token TOKEN_CON
+%token TOKEN_ALF
+%token TOKEN_END
+
+%start program
+
+%%
+
+number : TOKEN_NUMBER
+         { $$ = new mixal::Constant((int) strtol(yytext, 0, 10)); }
+
+self : TOKEN_MUL
+
+symbol_decl : TOKEN_LOCAL_SYMBOL_H
+              { $$ = new mixal::SymbolDecl(yytext); }
+            | TOKEN_IDENTIFIER
+              { $$ = new mixal::SymbolDecl(yytext); }
+
+symbol_ref : TOKEN_IDENTIFIER
+             { $$ = new mixal::SymbolRef(yytext); }
+           | TOKEN_LOCAL_SYMBOL_B
+             { $$ = new mixal::SymbolRef(yytext); }
+           | TOKEN_LOCAL_SYMBOL_F
+             { $$ = new mixal::SymbolRef(yytext); }
+       
+atomic_expression : number
+                    { $$ = $1 }
+                  | symbol_ref
+                    { $$ = $1; }
+                  | self
+                    { $$ = new mixal::Self(); }
+
+expression : atomic_expression
+             { $$ = $1; }
+           | TOKEN_PLUS atomic_expression
+             { $$ = $2; }
+           | TOKEN_MINUS atomic_expression
+             { $$ = new mixal::NegationExpression(static_cast<const mixal::IntValue*>($2)); }
+           | expression TOKEN_PLUS atomic_expression
+             { $$ = new mixal::AdditionExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($3)); }
+           | expression TOKEN_MINUS atomic_expression
+             { $$ = new mixal::SubtractionExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($3)); }
+           | expression TOKEN_MUL atomic_expression
+             { $$ = new mixal::MultiplicationExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($3)); }
+           | expression TOKEN_DIV atomic_expression
+             { $$ = new mixal::DivisionExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($3)); }
+           | expression TOKEN_FRAC atomic_expression
+             { $$ = new mixal::RemainderExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($3)); }
+           | expression TOKEN_RANGE atomic_expression
+
+a_part : expression
+         { $$ = $1; }
+       | symbol_ref
+         { $$ = $1; }
+       | literal_constant
+         { $$ = $1; }
+
+i_part : TOKEN_COMMA expression
+         { $$ = $2; }
+
+f_part : TOKEN_LPAREN expression TOKEN_RPAREN
+         { $$ = new mixal::BitRange(static_cast<const mixal::IntValue *>($2)); }
+       | TOKEN_LPAREN expression TOKEN_RANGE expression TOKEN_RPAREN
+         { $$ = new mixal::BitRange(static_cast<const mixal::IntValue *>($2), static_cast<const mixal::IntValue *>($4)); }
+
+
+w_part : a_part 
+         { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), NULL, NULL); }
+       | a_part i_part
+         { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($2), NULL); }
+       | a_part f_part
+         { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), NULL, static_cast<const mixal::BitRange*>($2)); }
+       | a_part i_part f_part
+         { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($2), static_cast<const mixal::BitRange*>($3)); }
+       | f_part
+         { $$ = new mixal::WExpression(NULL, NULL, static_cast<const mixal::BitRange*>($1)); }
+
+literal_constant : TOKEN_EQ expression TOKEN_EQ
+                   { $$ = new mixal::LiteralConstant(static_cast<const mixal::IntValue*>($2)); }
+
+op : TOKEN_OP_NOP
+     { $$ = new mixal::Opcode(TOKEN_OP_NOP, "NOP"); }
+   | TOKEN_OP_ADD
+     { $$ = new mixal::Opcode(TOKEN_OP_ADD, "ADD"); }
+   | TOKEN_OP_FADD
+     { $$ = new mixal::Opcode(TOKEN_OP_FADD, "FADD"); }
+   | TOKEN_OP_SUB
+     { $$ = new mixal::Opcode(TOKEN_OP_SUB, "SUB"); }
+   | TOKEN_OP_FSUB
+     { $$ = new mixal::Opcode(TOKEN_OP_FSUB, "FSUB"); }
+   | TOKEN_OP_MUL
+     { $$ = new mixal::Opcode(TOKEN_OP_MUL, "MUL"); }
+   | TOKEN_OP_FMUL
+     { $$ = new mixal::Opcode(TOKEN_OP_FMUL, "FMUL"); }
+   | TOKEN_OP_DIV
+     { $$ = new mixal::Opcode(TOKEN_OP_DIV, "DIV"); }
+   | TOKEN_OP_FDIV
+     { $$ = new mixal::Opcode(TOKEN_OP_FDIV, "FDIV"); }
+   | TOKEN_OP_NUM
+     { $$ = new mixal::Opcode(TOKEN_OP_NUM, "NUM"); }
+   | TOKEN_OP_CHAR
+     { $$ = new mixal::Opcode(TOKEN_OP_CHAR, "CHAR"); }
+   | TOKEN_OP_HLT
+     { $$ = new mixal::Opcode(TOKEN_OP_HLT, "HLT"); }
+   | TOKEN_OP_SLA
+     { $$ = new mixal::Opcode(TOKEN_OP_SLA, "SLA"); }
+   | TOKEN_OP_SRA
+     { $$ = new mixal::Opcode(TOKEN_OP_SRA, "SRA"); }
+   | TOKEN_OP_SLAX
+     { $$ = new mixal::Opcode(TOKEN_OP_SLAX, "SLAX"); }
+   | TOKEN_OP_SRAX
+     { $$ = new mixal::Opcode(TOKEN_OP_SRAX, "SRAX"); }
+   | TOKEN_OP_SLC
+     { $$ = new mixal::Opcode(TOKEN_OP_SLC, "SLC"); }
+   | TOKEN_OP_SRC
+     { $$ = new mixal::Opcode(TOKEN_OP_SRC, "SRC"); }
+   | TOKEN_OP_MOVE
+     { $$ = new mixal::Opcode(TOKEN_OP_MOVE, "MOVE"); }
+   | TOKEN_OP_LDA
+     { $$ = new mixal::Opcode(TOKEN_OP_LDA, "LDA"); }
+   | TOKEN_OP_LD1
+     { $$ = new mixal::Opcode(TOKEN_OP_LD1, "LD1"); }
+   | TOKEN_OP_LD2
+     { $$ = new mixal::Opcode(TOKEN_OP_LD2, "LD2"); }
+   | TOKEN_OP_LD3
+     { $$ = new mixal::Opcode(TOKEN_OP_LD3, "LD3"); }
+   | TOKEN_OP_LD4
+     { $$ = new mixal::Opcode(TOKEN_OP_LD4, "LD4"); }
+   | TOKEN_OP_LD5
+     { $$ = new mixal::Opcode(TOKEN_OP_LD5, "LD5"); }
+   | TOKEN_OP_LD6
+     { $$ = new mixal::Opcode(TOKEN_OP_LD6, "LD6"); }
+   | TOKEN_OP_LDX
+     { $$ = new mixal::Opcode(TOKEN_OP_LDX, "LDX"); }
+   | TOKEN_OP_LDAN
+     { $$ = new mixal::Opcode(TOKEN_OP_LDAN, "LDAN"); }
+   | TOKEN_OP_LD1N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD1N, "LD1N"); }
+   | TOKEN_OP_LD2N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD2N, "LD2N"); }
+   | TOKEN_OP_LD3N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD3N, "LD3N"); }
+   | TOKEN_OP_LD4N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD4N, "LD4N"); }
+   | TOKEN_OP_LD5N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD5N, "LD5N"); }
+   | TOKEN_OP_LD6N
+     { $$ = new mixal::Opcode(TOKEN_OP_LD6N, "LD6N"); }
+   | TOKEN_OP_LDXN
+     { $$ = new mixal::Opcode(TOKEN_OP_LDXN, "LDXN"); }
+   | TOKEN_OP_STA
+     { $$ = new mixal::Opcode(TOKEN_OP_STA, "STA"); }
+   | TOKEN_OP_ST1
+     { $$ = new mixal::Opcode(TOKEN_OP_ST1, "ST1"); }
+   | TOKEN_OP_ST2
+     { $$ = new mixal::Opcode(TOKEN_OP_ST2, "ST2"); }
+   | TOKEN_OP_ST3
+     { $$ = new mixal::Opcode(TOKEN_OP_ST3, "ST3"); }
+   | TOKEN_OP_ST4
+     { $$ = new mixal::Opcode(TOKEN_OP_ST4, "ST4"); }
+   | TOKEN_OP_ST5
+     { $$ = new mixal::Opcode(TOKEN_OP_ST5, "ST5"); }
+   | TOKEN_OP_ST6
+     { $$ = new mixal::Opcode(TOKEN_OP_ST6, "ST6"); }
+   | TOKEN_OP_STX
+     { $$ = new mixal::Opcode(TOKEN_OP_STX, "STX"); }
+   | TOKEN_OP_STJ
+     { $$ = new mixal::Opcode(TOKEN_OP_STJ, "STJ"); }
+   | TOKEN_OP_STZ
+     { $$ = new mixal::Opcode(TOKEN_OP_STZ, "STZ"); }
+   | TOKEN_OP_JBUS
+     { $$ = new mixal::Opcode(TOKEN_OP_JBUS, "JBUS"); }
+   | TOKEN_OP_IOC
+     { $$ = new mixal::Opcode(TOKEN_OP_IOC, "IOC"); }
+   | TOKEN_OP_IN
+     { $$ = new mixal::Opcode(TOKEN_OP_IN, "IN"); }
+   | TOKEN_OP_OUT
+     { $$ = new mixal::Opcode(TOKEN_OP_OUT, "OUT"); }
+   | TOKEN_OP_JRED
+     { $$ = new mixal::Opcode(TOKEN_OP_JRED, "JRED"); }
+   | TOKEN_OP_JMP
+     { $$ = new mixal::Opcode(TOKEN_OP_JMP, "JMP"); }
+   | TOKEN_OP_JSJ
+     { $$ = new mixal::Opcode(TOKEN_OP_JSJ, "JSJ"); }
+   | TOKEN_OP_JOV
+     { $$ = new mixal::Opcode(TOKEN_OP_JOV, "JOV"); }
+   | TOKEN_OP_JNOV
+     { $$ = new mixal::Opcode(TOKEN_OP_JNOV, "JNOV"); }
+   | TOKEN_OP_JL
+     { $$ = new mixal::Opcode(TOKEN_OP_JL, "JL"); }
+   | TOKEN_OP_JE
+     { $$ = new mixal::Opcode(TOKEN_OP_JE, "JE"); }
+   | TOKEN_OP_JG
+     { $$ = new mixal::Opcode(TOKEN_OP_JG, "JG"); }
+   | TOKEN_OP_JGE
+     { $$ = new mixal::Opcode(TOKEN_OP_JGE, "JGE"); }
+   | TOKEN_OP_JNE
+     { $$ = new mixal::Opcode(TOKEN_OP_JNE, "JNE"); }
+   | TOKEN_OP_JLE
+     { $$ = new mixal::Opcode(TOKEN_OP_JLE, "JLE"); }
+   | TOKEN_OP_JAN
+     { $$ = new mixal::Opcode(TOKEN_OP_JAN, "JAN"); }
+   | TOKEN_OP_JAZ
+     { $$ = new mixal::Opcode(TOKEN_OP_JAZ, "JAZ"); }
+   | TOKEN_OP_JAP
+     { $$ = new mixal::Opcode(TOKEN_OP_JAP, "JAP"); }
+   | TOKEN_OP_JANN
+     { $$ = new mixal::Opcode(TOKEN_OP_JANN, "JANN"); }
+   | TOKEN_OP_JANZ
+     { $$ = new mixal::Opcode(TOKEN_OP_JANZ, "JANZ"); }
+   | TOKEN_OP_JANP
+     { $$ = new mixal::Opcode(TOKEN_OP_JANP, "JANP"); }
+   | TOKEN_OP_J1N
+     { $$ = new mixal::Opcode(TOKEN_OP_J1N, "J1N"); }
+   | TOKEN_OP_J1Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J1Z, "J1Z"); }
+   | TOKEN_OP_J1P
+     { $$ = new mixal::Opcode(TOKEN_OP_J1P, "J1P"); }
+   | TOKEN_OP_J1NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J1NN, "J1NN"); }
+   | TOKEN_OP_J1NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J1NZ, "J1NZ"); }
+   | TOKEN_OP_J1NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J1NP, "J1NP"); }
+   | TOKEN_OP_J2N
+     { $$ = new mixal::Opcode(TOKEN_OP_J2N, "J2N"); }
+   | TOKEN_OP_J2Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J2Z, "J2Z"); }
+   | TOKEN_OP_J2P
+     { $$ = new mixal::Opcode(TOKEN_OP_J2P, "J2P"); }
+   | TOKEN_OP_J2NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J2NN, "J2NN"); }
+   | TOKEN_OP_J2NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J2NZ, "J2NZ"); }
+   | TOKEN_OP_J2NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J2NP, "J2NP"); }
+   | TOKEN_OP_J3N
+     { $$ = new mixal::Opcode(TOKEN_OP_J3N, "J3N"); }
+   | TOKEN_OP_J3Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J3Z, "J3Z"); }
+   | TOKEN_OP_J3P
+     { $$ = new mixal::Opcode(TOKEN_OP_J3P, "J3P"); }
+   | TOKEN_OP_J3NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J3NN, "J3NN"); }
+   | TOKEN_OP_J3NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J3NZ, "J3NZ"); }
+   | TOKEN_OP_J3NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J3NP, "J3NP"); }
+   | TOKEN_OP_J4N
+     { $$ = new mixal::Opcode(TOKEN_OP_J4N, "J4N"); }
+   | TOKEN_OP_J4Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J4Z, "J4Z"); }
+   | TOKEN_OP_J4P
+     { $$ = new mixal::Opcode(TOKEN_OP_J4P, "J4P"); }
+   | TOKEN_OP_J4NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J4NN, "J4NN"); }
+   | TOKEN_OP_J4NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J4NZ, "J4NZ"); }
+   | TOKEN_OP_J4NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J4NP, "J4NP"); }
+   | TOKEN_OP_J5N
+     { $$ = new mixal::Opcode(TOKEN_OP_J5N, "J5N"); }
+   | TOKEN_OP_J5Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J5Z, "J5Z"); }
+   | TOKEN_OP_J5P
+     { $$ = new mixal::Opcode(TOKEN_OP_J5P, "J5P"); }
+   | TOKEN_OP_J5NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J5NN, "J5NN"); }
+   | TOKEN_OP_J5NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J5NZ, "J5NZ"); }
+   | TOKEN_OP_J5NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J5NP, "J5NP"); }
+   | TOKEN_OP_J6N
+     { $$ = new mixal::Opcode(TOKEN_OP_J6N, "J6N"); }
+   | TOKEN_OP_J6Z
+     { $$ = new mixal::Opcode(TOKEN_OP_J6Z, "J6Z"); }
+   | TOKEN_OP_J6P
+     { $$ = new mixal::Opcode(TOKEN_OP_J6P, "J6P"); }
+   | TOKEN_OP_J6NN
+     { $$ = new mixal::Opcode(TOKEN_OP_J6NN, "J6NN"); }
+   | TOKEN_OP_J6NZ
+     { $$ = new mixal::Opcode(TOKEN_OP_J6NZ, "J6NZ"); }
+   | TOKEN_OP_J6NP
+     { $$ = new mixal::Opcode(TOKEN_OP_J6NP, "J6NP"); }
+   | TOKEN_OP_JXN
+     { $$ = new mixal::Opcode(TOKEN_OP_JXN, "JXN"); }
+   | TOKEN_OP_JXZ
+     { $$ = new mixal::Opcode(TOKEN_OP_JXZ, "JXZ"); }
+   | TOKEN_OP_JXP
+     { $$ = new mixal::Opcode(TOKEN_OP_JXP, "JXP"); }
+   | TOKEN_OP_JXNN
+     { $$ = new mixal::Opcode(TOKEN_OP_JXNN, "JXNN"); }
+   | TOKEN_OP_JXNZ
+     { $$ = new mixal::Opcode(TOKEN_OP_JXNZ, "JXNZ"); }
+   | TOKEN_OP_JXNP
+     { $$ = new mixal::Opcode(TOKEN_OP_JXNP, "JXNP"); }
+   | TOKEN_OP_INCA
+     { $$ = new mixal::Opcode(TOKEN_OP_INCA, "INCA"); }
+   | TOKEN_OP_DECA
+     { $$ = new mixal::Opcode(TOKEN_OP_DECA, "DECA"); }
+   | TOKEN_OP_ENTA
+     { $$ = new mixal::Opcode(TOKEN_OP_ENTA, "ENTA"); }
+   | TOKEN_OP_ENNA
+     { $$ = new mixal::Opcode(TOKEN_OP_ENNA, "ENNA"); }
+   | TOKEN_OP_INC1
+     { $$ = new mixal::Opcode(TOKEN_OP_INC1, "INC1"); }
+   | TOKEN_OP_DEC1
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC1, "DEC1"); }
+   | TOKEN_OP_ENT1
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT1, "ENT1"); }
+   | TOKEN_OP_ENN1
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN1, "ENN1"); }
+   | TOKEN_OP_INC2
+     { $$ = new mixal::Opcode(TOKEN_OP_INC2, "INC2"); }
+   | TOKEN_OP_DEC2
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC2, "DEC2"); }
+   | TOKEN_OP_ENT2
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT2, "ENT2"); }
+   | TOKEN_OP_ENN2
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN2, "ENN2"); }
+   | TOKEN_OP_INC3
+     { $$ = new mixal::Opcode(TOKEN_OP_INC3, "INC3"); }
+   | TOKEN_OP_DEC3
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC3, "DEC3"); }
+   | TOKEN_OP_ENT3
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT3, "ENT3"); }
+   | TOKEN_OP_ENN3
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN3, "ENN3"); }
+   | TOKEN_OP_INC4
+     { $$ = new mixal::Opcode(TOKEN_OP_INC4, "INC4"); }
+   | TOKEN_OP_DEC4
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC4, "DEC4"); }
+   | TOKEN_OP_ENT4
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT4, "ENT4"); }
+   | TOKEN_OP_ENN4
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN4, "ENN4"); }
+   | TOKEN_OP_INC5
+     { $$ = new mixal::Opcode(TOKEN_OP_INC5, "INC5"); }
+   | TOKEN_OP_DEC5
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC5, "DEC5"); }
+   | TOKEN_OP_ENT5
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT5, "ENT5"); }
+   | TOKEN_OP_ENN5
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN5, "ENN5"); }
+   | TOKEN_OP_INC6
+     { $$ = new mixal::Opcode(TOKEN_OP_INC6, "INC6"); }
+   | TOKEN_OP_DEC6
+     { $$ = new mixal::Opcode(TOKEN_OP_DEC6, "DEC6"); }
+   | TOKEN_OP_ENT6
+     { $$ = new mixal::Opcode(TOKEN_OP_ENT6, "ENT6"); }
+   | TOKEN_OP_ENN6
+     { $$ = new mixal::Opcode(TOKEN_OP_ENN6, "ENN6"); }
+   | TOKEN_OP_INCX
+     { $$ = new mixal::Opcode(TOKEN_OP_INCX, "INCX"); }
+   | TOKEN_OP_DECX
+     { $$ = new mixal::Opcode(TOKEN_OP_DECX, "DECX"); }
+   | TOKEN_OP_ENTX
+     { $$ = new mixal::Opcode(TOKEN_OP_ENTX, "ENTX"); }
+   | TOKEN_OP_ENNX
+     { $$ = new mixal::Opcode(TOKEN_OP_ENNX, "ENNX"); }
+   | TOKEN_OP_CMPA
+     { $$ = new mixal::Opcode(TOKEN_OP_CMPA, "CMPA"); }
+   | TOKEN_OP_FCMP
+     { $$ = new mixal::Opcode(TOKEN_OP_FCMP, "FCMP"); }
+   | TOKEN_OP_CMP1
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP1, "CMP1"); }
+   | TOKEN_OP_CMP2
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP2, "CMP2"); }
+   | TOKEN_OP_CMP3
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP3, "CMP3"); }
+   | TOKEN_OP_CMP4
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP4, "CMP4"); }
+   | TOKEN_OP_CMP5
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP5, "CMP5"); }
+   | TOKEN_OP_CMP6
+     { $$ = new mixal::Opcode(TOKEN_OP_CMP6, "CMP6"); }
+   | TOKEN_OP_CMPX
+     { $$ = new mixal::Opcode(TOKEN_OP_CMPX, "CMPX"); }
+
+operation : op w_part 
+           { $$ = new mixal::Operation(static_cast<const mixal::Opcode*>($1), static_cast<const mixal::WExpression*>($2)); }
+         | op
+           { $$ = new mixal::Operation(static_cast<const mixal::Opcode*>($1), NULL); }
+
+equ : symbol_decl TOKEN_EQU expression
+      { $$ = new mixal::Equ(static_cast<const mixal::SymbolDecl*>($1), static_cast<const mixal::IntValue*>($3)); }
+
+orig : TOKEN_ORIG expression
+       { $$ = new mixal::Orig(static_cast<const mixal::IntValue*>($2)); }
+
+con : TOKEN_CON w_part
+      { $$ = new mixal::Con(static_cast<mixal::WExpression*>($1)); }
+
+alf : TOKEN_ALF_STR
+      { $$ = new mixal::Alf(std::string(yytext + strlen(yytext) - 5)); } 
+
+end : TOKEN_END w_part
+      { $$ = new mixal::End(static_cast<mixal::WExpression*>($1)); }
+
+statement : operation
+            { $$ = new mixal::Statement(NULL, $1, NULL); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | operation statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl operation
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl operation statement
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | equ statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | equ
+            { $$ = new mixal::Statement(NULL, $1, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | orig
+            { $$ = new mixal::Statement(NULL, $1, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | orig statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl orig
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl orig statement
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | con
+            { $$ = new mixal::Statement(NULL, $1, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | con statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl con
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl con statement
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | alf
+            { $$ = new mixal::Statement(NULL, $1, NULL); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | alf statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl alf
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl alf statement
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | end
+            { $$ = new mixal::Statement(NULL, $1, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | end statement
+            { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl end
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+          | symbol_decl end statement
+            { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+
+program : statement
+        
+%%

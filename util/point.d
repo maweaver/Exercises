@@ -1,7 +1,7 @@
 module util.point;
 
+import std.conv;
 import std.math;
-import std.string;
 
 /++
  + A 2-dimensional point, consisting of an X and Y coordinate.  This can also be
@@ -94,21 +94,21 @@ class Point {
   /++
    + 0 if the two points do not represent the same location in space
 	 +/
-	int opEquals(Object o) {
+	bool opEquals(Object o) {
 		Point op = cast(Point) o;
 		if(op) {
 			return abs(op.x - _x) < tolerance && 
 			  abs(op.y - _y) < tolerance;
 		} else {
-			return 0;
+			return false;
 		}
 	}
 	
 	/++
 	 + Gets the string representation of this point
 	 +/
-	char[] toString() {
-		return "(" ~ std.string.toString(x) ~ ", " ~ std.string.toString(y) ~ ")";
+	string toString() {
+		return "(" ~ to!(string)(x) ~ ", " ~ to!(string)(y) ~ ")";
 	}
 
 }

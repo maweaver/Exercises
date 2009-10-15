@@ -1,8 +1,8 @@
 module util.leftheap;
 
+import std.conv;
 import std.math;
 import std.stdio;
-import std.string;
 
 /++
  + A left heap is a binary tree with two conditions:
@@ -147,7 +147,7 @@ class LeftHeap(T) {
 	/++
 	 + Returns a .dot representation of the graph
 	 +/
-	char[] toString() {
+	string toString() {
 		return "digraph G {\n" ~
 		(root ? root.toString() : "\n") ~
 			"}";
@@ -239,21 +239,21 @@ class LeftHeapNode(T) {
 		return upper;
 	}
 	
-	char[] toString() {
-		auto str = std.string.toString(toHash) ~ " [label=\"" ~ std.string.toString(value) ~ ":" ~ std.string.toString(s) ~ "\"];\n";
+	string toString() {
+		auto str = to!(string)(toHash) ~ " [label=\"" ~ to!(string)(value) ~ ":" ~ to!(string)(s) ~ "\"];\n";
 		if(left) {
-			str ~= std.string.toString(toHash) ~ " -> " ~ std.string.toString(left.toHash) ~ ";\n";
+			str ~= to!(string)(toHash) ~ " -> " ~ to!(string)(left.toHash) ~ ";\n";
 			str ~= left.toString();
 		} else {
-			str ~= std.string.toString(toHash) ~ "00 [label=\"\", shape=\"box\"];\n";
-			str ~= std.string.toString(toHash) ~ " -> " ~ std.string.toString(toHash) ~ "00;\n";
+			str ~= to!(string)(toHash) ~ "00 [label=\"\", shape=\"box\"];\n";
+			str ~= to!(string)(toHash) ~ " -> " ~ to!(string)(toHash) ~ "00;\n";
 		}
 		if(right) {
-			str ~= std.string.toString(toHash) ~ " -> " ~ std.string.toString(right.toHash) ~ ";\n";
+			str ~= to!(string)(toHash) ~ " -> " ~ to!(string)(right.toHash) ~ ";\n";
 			str ~= right.toString();
 		} else {
-			str ~= std.string.toString(toHash) ~ "11 [label=\"\", shape=\"box\"];\n";
-			str ~= std.string.toString(toHash) ~ " -> " ~ std.string.toString(toHash) ~ "11;\n";
+			str ~= to!(string)(toHash) ~ "11 [label=\"\", shape=\"box\"];\n";
+			str ~= to!(string)(toHash) ~ " -> " ~ to!(string)(toHash) ~ "11;\n";
 		}
 		
 		return str;

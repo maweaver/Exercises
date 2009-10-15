@@ -1,0 +1,13 @@
+.tabs {
+	visibility: hidden;
+	display: none;
+}
+
+.contents p {
+	width: 500px;
+	text-align: justify;
+}
+
+.fragment {
+	font-size: 90%;
+}

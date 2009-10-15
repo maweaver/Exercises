@@ -2,8 +2,8 @@ import std.random;
 import std.stdio;
 import std.c.stdio;
 
-import elliptic;
-import wrappedint;
+import util.elliptic;
+import util.wrappedint;
 
 int binaryGcd(int u, int v) {
 	int shift;
@@ -49,7 +49,7 @@ void main() {
 
 	// Create a curve that wraps around the number, with a = 4, b = -a, and
 	// k = num
-	auto a = rand() % num;
+	auto a = uniform(0, num);
 	auto b = -a;
 	auto curve = new IntEllipticCurve(a, b, num);
 	

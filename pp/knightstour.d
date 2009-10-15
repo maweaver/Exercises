@@ -133,6 +133,6 @@ void main() {
 	scanf("%d %d %d", &boardSize, &startX, &startY);
 	
 	auto board = new ChessBoard(boardSize, new Point(startX, startY));
-	board.search(board.start);
+	board.depthSearch(board.start);
 	board.visualize();
 }

@@ -1,7 +1,7 @@
 module util.size;
 
+import std.conv;
 import std.math;
-import std.string;
 
 /++
  + A size, consisting of a width and a height
@@ -86,20 +86,20 @@ class Size {
   /++
    + 0 if the two sizes do not represent the same size
 	 +/
-	int opEquals(Object o) {
+	bool opEquals(Object o) {
 		Size op = cast(Size) o;
 		if(op) {
 			return abs(op.width - _width) < tolerance && 
 			  abs(op.height - _height) < tolerance;
 		} else {
-			return 0;
+			return false;
 		}
 	}
 	
 	/++
 	 + Gets the string representation of this size
 	 +/
-	char[] toString() {
-		return std.string.toString(width) ~ "x" ~ std.string.toString(height);
+	string toString() {
+		return to!(string)(width) ~ "x" ~ to!(string)(height);
 	}
 }
