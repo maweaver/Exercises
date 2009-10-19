@@ -1,4 +1,7 @@
 #include <iostream>
+#include <sstream>
+#include <typeinfo>
+#include <vector>
 #include <symbolresolver.hh>
 
 namespace mixal {
@@ -14,6 +17,36 @@ SymbolResolver::~SymbolResolver()
 
 void SymbolResolver::resolveAll(Statement *statement)
 {
+	std::vector<Statement *> newStatements;
+	Statement *prevStatement;
+	Statement *curStatement = statement;
+	int conNum = 1;
+	while(curStatement) {
+		Operation *operation = dynamic_cast<Operation *>(curStatement->cmd());
+		if(operation) {
+			WExpression *wExpression = operation->wExpression();
+			if(wExpression) {
+				LiteralConstant *con = dynamic_cast<LiteralConstant *>(wExpression->address());
+				if(con) {
+					std::stringstream conLabel;
+					conLabel << "_CON" << conNum++;
+					newStatements.push_back(new Statement(new SymbolDecl(conLabel.str()), new Con(new WExpression(con->intValue(), NULL, NULL)), NULL));
+
+					operation->setWExpression(new WExpression(new SymbolRef(conLabel.str()), NULL, NULL));
+				}
+			}
+		}
+		prevStatement = curStatement;
+		curStatement = curStatement->next;
+	}
+
+	curStatement = prevStatement;
+	for(std::vector<Statement *>::iterator newStatementsIt = newStatements.begin(); newStatementsIt != newStatements.end(); ++newStatementsIt) {
+		curStatement->next = *newStatementsIt;
+		curStatement = curStatement->next;
+	}
+	curStatement->next = NULL;
+
 	while(mResolvedSymbols && mHasUnresolvedSymbols) {
 		mResolvedSymbols = false;
 		mHasUnresolvedSymbols = false;
@@ -49,21 +82,23 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 	}
 
 	Statement *statement = dynamic_cast<Statement *>(&node);
-	if(statement) {
-		if(mCurAddress != -1) {
-			mCurAddress++;
-			if(statement->label()) {
-				mValues[statement->label()->name()] = mCurAddress;
-				if(mDebug) {
-					std::cerr << "Setting label " << statement->label()->name() << " to address " << mCurAddress << std::endl;
-				}
+	if(statement && mCurAddress != -1) {
+		if(statement->label()) {
+			mValues[statement->label()->name()] = mCurAddress - 1;
+			if(mDebug) {
+				std::cerr << "Setting label " << statement->label()->name() << " to address " << mCurAddress << std::endl;
 			}
 		}
 	}
 
+	Con *con = dynamic_cast<Con *>(&node);
+	if(con && mCurAddress != -1) {
+		con->address = mCurAddress++;
+	}
+
 	Operation *operation = dynamic_cast<Operation *>(&node);
 	if(operation && mCurAddress != -1) {
-		operation->address = mCurAddress;
+		operation->address = mCurAddress++;
 	}
 
 	Equ *equ = dynamic_cast<Equ *>(&node);
@@ -77,6 +112,7 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 				}
 			} catch(const char *msg) {
 				mHasUnresolvedSymbols = true;
+				mValues.erase(equ->symbol()->name());
 				if(mDebug) {
 					std::cerr << "Deferring resolution of symbol " << equ->symbol()->name() << " due to unsatisfied dependencies" << std::endl;
 				}
@@ -85,25 +121,30 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 	}
 
 	SymbolRef *symbolRef = dynamic_cast<SymbolRef *>(&node);
-	if(symbolRef) {
-		if(symbolRef->resolved()) {
+	if(symbolRef && !symbolRef->resolved()) {
+		std::string symbolName = symbolRef->symbol();
+		std::string lookupName = symbolName;
+		int symbolOffset = 0;
+
+		if(symbolName.length() == 2 &&
+				symbolName[0] >= '0' && symbolName[0] <= '9' &&
+				symbolName[1] == 'B' || symbolName[1] == 'F') {
+
+			symbolOffset = symbolName[1] == 'B' ? -1 : 1;
+			lookupName[1] = 'H';
+		}
+
+		std::map<std::string, int>::iterator it = mValues.find(lookupName);
+		if(it != mValues.end()) {
+			symbolRef->resolve((*it).second + symbolOffset);
+			mResolvedSymbols = true;
 			if(mDebug) {
-				std::cerr << "Symbol " << symbolRef->symbol() << " already resolved, no action needed" << std::endl;
+				std::cerr << "Resolving " << symbolName << "/" << lookupName << " to value " << ((*it).second + symbolOffset) << std::endl;
 			}
 		} else {
-			if(symbolRef->symbol().length() == 2 && symbolRef->symbol()[0] >= '0' && symbolRef->symbol()[0] <= '9' && symbolRef->symbol()[1] == 'B')
-			std::map<std::string, int>::iterator it = mValues.find(symbolRef->symbol());
-			if(it != mValues.end()) {
-				symbolRef->resolve((*it).second);
-				mResolvedSymbols = true;
-				if(mDebug) {
-					std::cerr << "Resolving " << symbolRef->symbol() << " to value " << (*it).second << std::endl;
-				}
-			} else {
-				mHasUnresolvedSymbols = true;
-				if(mDebug) {
-					std::cerr << "Reference to symbol " << symbolRef->symbol() << " could not be resolved" << std::endl;
-				}
+			mHasUnresolvedSymbols = true;
+			if(mDebug) {
+				std::cerr << "Reference to symbol " << symbolName << "/" << lookupName << " could not be resolved" << std::endl;
 			}
 		}
 	}

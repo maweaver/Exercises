@@ -28,7 +28,7 @@
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.664575893" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
 <option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1413347647" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" valueType="enumerated"/>
 <option id="gnu.c.compiler.exe.debug.option.debugging.level.1743305000" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
-<option id="gnu.c.compiler.option.include.paths.2056374153" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath"/>
+<option id="gnu.c.compiler.option.include.paths.2056374153" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths"/>
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.504860219" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.266773211" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
@@ -304,7 +304,6 @@
 <buildTargets>
 <target name="build" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -312,7 +311,6 @@
 </target>
 <target name="clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>clean build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -320,7 +318,6 @@
 </target>
 <target name="configure" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>configure --prefix=output</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -328,8 +325,15 @@
 </target>
 <target name="install" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>install</buildTarget>
+<stopOnError>true</stopOnError>
+<useDefaultCommand>true</useDefaultCommand>
+<runAllBuilders>true</runAllBuilders>
+</target>
+<target name="Copy of clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+<buildCommand>waf</buildCommand>
+<buildArguments/>
+<buildTarget>clean build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
 <runAllBuilders>true</runAllBuilders>
@@ -640,7 +644,6 @@
 <buildTargets>
 <target name="build" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -648,7 +651,6 @@
 </target>
 <target name="clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>clean build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -656,7 +658,6 @@
 </target>
 <target name="configure" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>configure --prefix=output</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
@@ -664,8 +665,15 @@
 </target>
 <target name="install" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>waf</buildCommand>
-<buildArguments/>
 <buildTarget>install</buildTarget>
+<stopOnError>true</stopOnError>
+<useDefaultCommand>true</useDefaultCommand>
+<runAllBuilders>true</runAllBuilders>
+</target>
+<target name="Copy of clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+<buildCommand>waf</buildCommand>
+<buildArguments/>
+<buildTarget>clean build -v</buildTarget>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>true</useDefaultCommand>
 <runAllBuilders>true</runAllBuilders>

@@ -413,6 +413,8 @@ public:
 
 	WExpression *wExpression() const;
 
+	int address;
+
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
 
@@ -452,6 +454,8 @@ public:
 
 	WExpression *wExpression() const;
 
+	void setWExpression(WExpression *wExpression);
+
 	int address;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
@@ -479,11 +483,6 @@ protected:
 	 */
 	AstNode *mCmd;
 
-	/*!
-	 *  \brief Next statement
-	 */
-	Statement *mNext;
-
 public:
 
 	/*!
@@ -501,12 +500,12 @@ public:
 	/*!
 	 *  \brief Command to perform
 	 */
-	const AstNode *cmd() const;
+	AstNode *cmd() const;
 
 	/*!
 	 *  \brief Next statement
 	 */
-	const Statement *next() const;
+	Statement *next;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
@@ -566,7 +565,7 @@ public:
 };
 	
 class LiteralConstant :
-public AstNode
+public IntValue
 {
 protected:
 	IntValue *mValue;
@@ -574,7 +573,9 @@ protected:
 public:
 	LiteralConstant(IntValue *value);
 
-	IntValue *value() const;
+	int value() const;
+
+	IntValue *intValue() const;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
