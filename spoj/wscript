@@ -35,51 +35,20 @@ def configure(conf):
 	conf.env['DLINKFLAGS'] = [ '-L-L../../util/build/default' ]
 
 def build(bld):
+	addrev                =    bld.new_task_gen()
+	addrev.features       =   'cc cprogram'
+	addrev.source         =   'addrev.c'
+	addrev.target         =   'addrev'
+
 	intss                =    bld.new_task_gen()
 	intss.features       =   'cc cprogram'
 	intss.source         =   'intss.c'
 	intss.target         =   'intss'
 
-	intssd               =    bld.new_task_gen()
-	intssd.features      =   'd dprogram'
-	intssd.source        =   'intss.d'
-	intssd.target        =   'intssd'
-	intssd.libs          =    [ 'utils' ]
-	intssd.env           =    bld.env_of_name('dmd').copy()
-
-	intsssub             =    bld.new_task_gen()
-	intsssub.features    =   'd dprogram'
-	intsssub.source      =   'intsssub.d'
-	intsssub.target      =   'intsssub'
-	intsssub.env         =    bld.env_of_name('gdc').copy()
-
-	intssgen             =    bld.new_task_gen()
-	intssgen.features    =   'cc cprogram'
-	intssgen.source      =   'intssgen.c'
-	intssgen.target      =   'intssgen'
-
 	maxiset              =    bld.new_task_gen()
 	maxiset.features     =   'cc cprogram'
 	maxiset.source       =   'maxiset.c'
 	maxiset.target       =   'maxiset'
-
-	maxisetd             =    bld.new_task_gen()
-	maxisetd.features    =   'd dprogram'
-	maxisetd.source      =   'maxiset.d'
-	maxisetd.target      =   'maxisetd'
-	maxisetd.libs        =    [ 'utils' ]
-	maxisetd.env         =    bld.env_of_name('dmd').copy()
-
-	maxisetgen           =    bld.new_task_gen()
-	maxisetgen.features  =   'cc cprogram'
-	maxisetgen.source    =   'maxisetgen.c'
-	maxisetgen.target    =   'maxisetgen'
-
-	maxisetsub           =    bld.new_task_gen()
-	maxisetsub.features  =   'd dprogram'
-	maxisetsub.source    =   'maxisetsub.d'
-	maxisetsub.target    =   'maxisetsub'
-	maxisetsub.env       =    bld.env_of_name('gdc').copy()
 
 	prime1               =    bld.new_task_gen()
 	prime1.features      =   'd dprogram'

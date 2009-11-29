@@ -19,17 +19,15 @@ def configure(conf):
 	conf.env.append_value('CCFLAGS', '-Wall')
 	conf.env.append_value('CCFLAGS', '-Werror')
 	
-	conf.env['DFLAGS'] = [ '-g' ]
+	conf.env['DFLAGS'] = [ '-g', '-debug', '-I../..' ]
 
 def build(bld):
 	utils                 =    bld.new_task_gen()
 	utils.features        =   'd dstaticlib'
 	utils.source          =   'dll.d dlx.d elliptic.d graph.d leftheap.d maze.d point.d queue.d qsort.d size.d stack.d visualizer.d wrappedint.d'
 	utils.target          =   'utils'
-	utils.env             =    bld.env_of_name('dmd').copy()
 
 	test                  =    bld.new_task_gen()
 	test.features         =   'd dprogram'
 	test.source           =    'qsort.d test.d'
 	test.target           =   'test'
-	test.env              =    bld.env_of_name('dmd').copy()
