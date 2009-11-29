@@ -14,10 +14,11 @@ import std.stdio;
  +    of the right child
  +/
 class LeftHeap(T) {
-	private:
+	protected:
 	
 	bool _minHeap;
 	LeftHeapNode!(T) root;
+	LeftHeapNode!(T)[T] nodeLookup;
 	
 	public:
 	
@@ -42,10 +43,11 @@ class LeftHeap(T) {
 	void insert(int value, T data) {
 		// Inefficient method, but easy
 		auto node = new LeftHeapNode!(T)(value, data);
+		nodeLookup[data] = node;
 		if(!root) {
 			root = node;
 		} else {
-			root = root.merge(minHeap, node);
+			root = merge(root, node);
 		}
 	}
 	
@@ -53,7 +55,10 @@ class LeftHeap(T) {
 	 + Insert another leftheap
 	 +/
 	void insert(LeftHeap!(T) heap) {
-		root = root.merge(minHeap, heap.root);
+		foreach(data, node; heap.nodeLookup) {
+			nodeLookup[data] = node;
+		}
+		root = merge(root, heap.root);
 	}
 	
 	/++
@@ -86,11 +91,16 @@ class LeftHeap(T) {
 	 +/
 	T poll() {
 		auto data = root.data;
+		nodeLookup.remove(data);
 		if(root.left) {
-			root = root.left.merge(minHeap, root.right);
+			root = merge(root.left, root.right);
 		} else {
 			root = root.right;
+			if(root) {
+				root.parent = null;
+			}
 		}
+		nodeLookup.remove(data);
 		return data;
 	}
 	
@@ -100,10 +110,14 @@ class LeftHeap(T) {
 	int pollValue() {
 		if(root) {
 			int value = root.value;
+			nodeLookup.remove(root.data);
 			if(root.left) {
-				root = root.left.merge(minHeap, root.right);
+				root = merge(root.left, root.right);
 			} else {
 				root = root.right;
+				if(root) {
+					root.parent = null;
+				}
 			}
 			return value;
 		} else {
@@ -143,6 +157,64 @@ class LeftHeap(T) {
 		
 		return ret;
 	}
+	
+	/++
+	 + Removes node with the given data.  Stops after removing a single node.  Takes O(n) time, since nodes are
+	 + not ordered by their data.
+	 +/
+	void remove(T data) {
+		/*
+		bool search(LeftHeapNode!(T) node, LeftHeapNode!(T) parent, bool left) {
+			if(!node) {
+				return false;
+			} else if(node.data == data) {
+				auto merged = merge(node.left, node.right);
+				
+				if(parent) {
+					if(left) {
+						parent.left = merged;
+					} else {
+						parent.right = merged;
+					}
+					updateRank(parent);
+				} else {
+					root = merged;
+				}
+				
+				return true;
+			} else {
+				if(node.left) {
+					if(search(node.left, node, true)) {
+						return true;
+					}
+				}
+				if(node.right) {
+					if(search(node.right, node, false)) {
+						return true;
+					}
+				}
+				
+				return false;
+			}
+		}
+		
+		search(root, null, false);*/
+		
+		if(data in nodeLookup) {
+			auto node = nodeLookup[data];
+			auto merged = merge(node.left, node.right);
+			if(node.parent) {
+				if(node.parent.left == node) {
+					node.parent.left = merged;
+				} else if(node.parent.right == node) {
+					node.parent.right = merged;
+				}
+				childrenModified(node.parent);
+			} else {
+				root = merged;
+			}
+		}
+	}
 
 	/++
 	 + Returns a .dot representation of the graph
@@ -152,6 +224,67 @@ class LeftHeap(T) {
 		(root ? root.toString() : "\n") ~
 			"}";
 	}
+	
+	protected:
+	
+	/++
+	 +  Updates the rank of the given node by calculating the minimum rank of its children and adding 1.  Also
+	 + ensures the left child has the higher rank.
+	 +/
+	void childrenModified(LeftHeapNode!(T) node) {
+		int sleft = node.left ? node.left.s : 0;
+		int sright = node.right ? node.right.s : 0;
+		
+		node.s = cast(int) fmin(sleft, sright) + 1;
+		
+		if(sleft < sright) {
+			auto tmp = node.left;
+			node.left = node.right;
+			node.right = tmp;
+		}	
+	}
+	
+	/++
+	 +  Merges two nodes to create a new node containing both nodes and their children.
+	 +/
+	LeftHeapNode!(T) merge(LeftHeapNode!(T) node1, LeftHeapNode!(T) node2) {
+		if(!node2) {
+			return node1;
+		}
+		if(!node1) {
+			return node2;
+		}
+		
+		// writefln("Merging node %d with node %d", a.value, b.value);
+		LeftHeapNode!(T) upper;
+		LeftHeapNode!(T) lower;
+		
+		if(node1.value < node2.value) {
+			upper = node1;
+			lower = node2;
+		} else {
+			upper = node2;
+			lower = node1;
+		}
+		
+		if(!minHeap) {
+			auto tmp = upper;
+			upper = lower;
+			lower = tmp;
+		}
+		
+		if(upper.right) {
+			upper.right = merge(upper.right, lower);
+		} else {
+			upper.right = lower;
+		}
+		upper.right.parent = upper;
+		
+		childrenModified(upper);
+		
+		return upper;
+	}
+
 }
 
 /++
@@ -170,6 +303,11 @@ class LeftHeapNode(T) {
 		this.data = data;
 		s = 1;
 	}
+	
+	/++
+	 + Parent
+	 +/
+	LeftHeapNode!(T) parent;
 	
 	/++
 	 + Left child
@@ -196,49 +334,6 @@ class LeftHeapNode(T) {
 	 +/
 	int s;
 	
-	
-	LeftHeapNode!(T) merge(bool minHeap, LeftHeapNode!(T) o) {
-		if(!o) {
-			return this;
-		}
-		// writefln("Merging node %d with node %d", a.value, b.value);
-		LeftHeapNode!(T) upper;
-		LeftHeapNode!(T) lower;
-		
-		if(value < o.value) {
-			upper = this;
-			lower = o;
-		} else {
-			upper = o;
-			lower = this;
-		}
-		
-		if(!minHeap) {
-			auto tmp = upper;
-			upper = lower;
-			lower = tmp;
-		}
-		
-		if(upper.right) {
-			upper.right = upper.right.merge(minHeap, lower);
-		} else {
-			upper.right = lower;
-		}
-		
-		int sleft = upper.left ? upper.left.s : 0;
-		int sright = upper.right ? upper.right.s : 0;
-		
-		upper.s = cast(int) fmin(sleft, sright) + 1;
-		
-		if(sleft < sright) {
-			auto tmp = upper.left;
-			upper.left = upper.right;
-			upper.right = tmp;
-		}
-			
-		return upper;
-	}
-	
 	string toString() {
 		auto str = to!(string)(toHash) ~ " [label=\"" ~ to!(string)(value) ~ ":" ~ to!(string)(s) ~ "\"];\n";
 		if(left) {
@@ -259,6 +354,7 @@ class LeftHeapNode(T) {
 		return str;
 	}
 }
+
 /*
 void main() {
 	auto heap1 = new LeftHeap!(string)(true);
@@ -269,12 +365,14 @@ void main() {
 	heap1.insert(6, "");
 	
 	auto heap2 = new LeftHeap!(string)(true);
-	heap2.insert(3, "");
-	heap2.insert(5, "");
-	heap2.insert(6, "");
-	heap2.insert(9, "");
+	heap2.insert(3, "a");
+	heap2.insert(5, "b");
+	heap2.insert(6, "c");
+	heap2.insert(9, "d");
 	
 	heap1.insert(heap2);
+	
+	heap1.remove("b");
 	
 	auto values = heap1.toValueArray;
 	writef("[");

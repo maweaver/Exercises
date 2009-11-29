@@ -242,8 +242,7 @@ class A {
 		}
 	}
 	
-	char[] toString() {
-		return " | " ~ std.string.toString(r1c1.val) ~ " " ~ std.string.toString(r1c2.val) ~ " |\n" ~
-		       " | " ~ std.string.toString(r2c1.val) ~ " " ~ std.string.toString(r2c2.val) ~ " | ";
+	string toString() {
+	       return format(" | %d %d |\n | %d %d |", r1c1.val, r1c2.val, r2c1.val, r2c2.val);
 	}
 }

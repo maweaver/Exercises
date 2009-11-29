@@ -43,6 +43,15 @@ class LinkedList(T) {
 		head = null;
 		tail = null;
 	}
+
+	this(T[] initialValues) {
+		length = 0;
+		head = null;
+		tail = null;
+		foreach(v; initialValues) {
+			pushTail(v);
+		}
+	}
 	
 	/++
 	 + Pushes a value onto the right side of the buffer
@@ -288,6 +297,42 @@ class LinkedList(T) {
 		splitNode.next = null;
 		newList.length = length - index - 1;
 		length = index + 1;
+		return newList;
+	}
+	
+	/++
+	 +  Removes the first node whose data value is equal to T
+	 +/
+	void remove(T value) {
+		auto node = head;
+		while(node) {
+			if(node.value == value) {
+				node.prev.next = node.next;
+				node.next.prev = node.prev;
+				break;
+			}
+			node = node.next;
+		}
+	}
+	
+	/++
+	 +  Removes all nodes
+	 +/
+	void clear() {
+		head = null;
+		tail = null;
+	}
+
+	/++
+	 +  Creates a new linked list by duplicating this one
+	 +/
+	LinkedList!(T) dup() {
+		auto newList = new LinkedList!(T)();
+		auto node = head;
+		while(node) {
+			newList.pushTail(node.value);
+			node = node.next;
+		}
 		return newList;
 	}
 	

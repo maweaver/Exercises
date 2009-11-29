@@ -1,7 +1,4 @@
 #include <iostream>
-#include <sstream>
-#include <typeinfo>
-#include <vector>
 #include <symbolresolver.hh>
 
 namespace mixal {
@@ -32,7 +29,9 @@ void SymbolResolver::resolveAll(Statement *statement)
 					conLabel << "_CON" << conNum++;
 					newStatements.push_back(new Statement(new SymbolDecl(conLabel.str()), new Con(new WExpression(con->intValue(), NULL, NULL)), NULL));
 
-					operation->setWExpression(new WExpression(new SymbolRef(conLabel.str()), NULL, NULL));
+					operation->setWExpression(new WExpression(new SymbolRef(conLabel.str()), 
+															  NULL, 
+															  new BitRange(new Constant(4), new Constant(5))));
 				}
 			}
 		}
@@ -82,11 +81,14 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 	}
 
 	Statement *statement = dynamic_cast<Statement *>(&node);
-	if(statement && mCurAddress != -1) {
-		if(statement->label()) {
-			mValues[statement->label()->name()] = mCurAddress - 1;
-			if(mDebug) {
-				std::cerr << "Setting label " << statement->label()->name() << " to address " << mCurAddress << std::endl;
+	if(statement) {
+		if(mCurAddress != -1) {
+			mCurAddress++;
+			if(statement->label()) {
+				mValues[statement->label()->name()] = mCurAddress;
+				if(mDebug) {
+					std::cerr << "Setting label " << statement->label()->name() << " to address " << mCurAddress << std::endl;
+				}
 			}
 		}
 	}
@@ -96,9 +98,14 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 		con->address = mCurAddress++;
 	}
 
+	Alf *alf = dynamic_cast<Alf *>(&node);
+	if(alf && mCurAddress != -1) {
+		alf->address = mCurAddress++;
+	}
+
 	Operation *operation = dynamic_cast<Operation *>(&node);
 	if(operation && mCurAddress != -1) {
-		operation->address = mCurAddress++;
+		operation->address = mCurAddress;
 	}
 
 	Equ *equ = dynamic_cast<Equ *>(&node);
@@ -112,7 +119,6 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 				}
 			} catch(const char *msg) {
 				mHasUnresolvedSymbols = true;
-				mValues.erase(equ->symbol()->name());
 				if(mDebug) {
 					std::cerr << "Deferring resolution of symbol " << equ->symbol()->name() << " due to unsatisfied dependencies" << std::endl;
 				}
@@ -121,30 +127,25 @@ void SymbolResolver::visit(AstNode *parent, AstNode &node)
 	}
 
 	SymbolRef *symbolRef = dynamic_cast<SymbolRef *>(&node);
-	if(symbolRef && !symbolRef->resolved()) {
-		std::string symbolName = symbolRef->symbol();
-		std::string lookupName = symbolName;
-		int symbolOffset = 0;
-
-		if(symbolName.length() == 2 &&
-				symbolName[0] >= '0' && symbolName[0] <= '9' &&
-				symbolName[1] == 'B' || symbolName[1] == 'F') {
-
-			symbolOffset = symbolName[1] == 'B' ? -1 : 1;
-			lookupName[1] = 'H';
-		}
-
-		std::map<std::string, int>::iterator it = mValues.find(lookupName);
-		if(it != mValues.end()) {
-			symbolRef->resolve((*it).second + symbolOffset);
-			mResolvedSymbols = true;
+	if(symbolRef) {
+		if(symbolRef->resolved()) {
 			if(mDebug) {
-				std::cerr << "Resolving " << symbolName << "/" << lookupName << " to value " << ((*it).second + symbolOffset) << std::endl;
+				std::cerr << "Symbol " << symbolRef->symbol() << " already resolved, no action needed" << std::endl;
 			}
 		} else {
-			mHasUnresolvedSymbols = true;
-			if(mDebug) {
-				std::cerr << "Reference to symbol " << symbolName << "/" << lookupName << " could not be resolved" << std::endl;
+			if(symbolRef->symbol().length() == 2 && symbolRef->symbol()[0] >= '0' && symbolRef->symbol()[0] <= '9' && symbolRef->symbol()[1] == 'B')
+			std::map<std::string, int>::iterator it = mValues.find(symbolRef->symbol());
+			if(it != mValues.end()) {
+				symbolRef->resolve((*it).second);
+				mResolvedSymbols = true;
+				if(mDebug) {
+					std::cerr << "Resolving " << symbolRef->symbol() << " to value " << (*it).second << std::endl;
+				}
+			} else {
+				mHasUnresolvedSymbols = true;
+				if(mDebug) {
+					std::cerr << "Reference to symbol " << symbolRef->symbol() << " could not be resolved" << std::endl;
+				}
 			}
 		}
 	}

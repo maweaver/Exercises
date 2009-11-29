@@ -59,6 +59,8 @@ public:
 
 	Alf(std::string str);
 
+	int address;
+
 	std::string str() const;
 };
 
@@ -413,8 +415,6 @@ public:
 
 	WExpression *wExpression() const;
 
-	int address;
-
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
 
@@ -454,8 +454,6 @@ public:
 
 	WExpression *wExpression() const;
 
-	void setWExpression(WExpression *wExpression);
-
 	int address;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
@@ -483,6 +481,11 @@ protected:
 	 */
 	AstNode *mCmd;
 
+	/*!
+	 *  \brief Next statement
+	 */
+	Statement *mNext;
+
 public:
 
 	/*!
@@ -500,12 +503,12 @@ public:
 	/*!
 	 *  \brief Command to perform
 	 */
-	AstNode *cmd() const;
+	const AstNode *cmd() const;
 
 	/*!
 	 *  \brief Next statement
 	 */
-	Statement *next;
+	const Statement *next() const;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
@@ -565,7 +568,7 @@ public:
 };
 	
 class LiteralConstant :
-public IntValue
+public AstNode
 {
 protected:
 	IntValue *mValue;
@@ -573,9 +576,7 @@ protected:
 public:
 	LiteralConstant(IntValue *value);
 
-	int value() const;
-
-	IntValue *intValue() const;
+	IntValue *value() const;
 
 	virtual void accept(AstNode *parent, AstNodeVisitor& visitor);
 };
@@ -612,7 +613,7 @@ public:
 	 *
 	 *  \param   filename   Name of the file to be parsed
 	 */
-	void parse(const std::string& filename);
+	Statement *parse(const std::string& filename);
 };
 
 }

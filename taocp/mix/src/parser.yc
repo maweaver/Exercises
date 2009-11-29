@@ -256,8 +256,8 @@ a_part : expression
          { $$ = $1; }
        | symbol_ref
          { $$ = $1; }
-       | TOKEN_EQ expression TOKEN_EQ
-         { $$ = new mixal::LiteralConstant(static_cast<const mixal::IntValue*>($2)); }
+       | literal_constant
+         { $$ = $1; }
 
 i_part : TOKEN_COMMA expression
          { $$ = $2; }
@@ -266,6 +266,7 @@ f_part : TOKEN_LPAREN expression TOKEN_RPAREN
          { $$ = new mixal::BitRange(static_cast<const mixal::IntValue *>($2)); }
        | TOKEN_LPAREN expression TOKEN_RANGE expression TOKEN_RPAREN
          { $$ = new mixal::BitRange(static_cast<const mixal::IntValue *>($2), static_cast<const mixal::IntValue *>($4)); }
+
 
 w_part : a_part 
          { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), NULL, NULL); }
@@ -277,6 +278,9 @@ w_part : a_part
          { $$ = new mixal::WExpression(static_cast<const mixal::IntValue*>($1), static_cast<const mixal::IntValue*>($2), static_cast<const mixal::BitRange*>($3)); }
        | f_part
          { $$ = new mixal::WExpression(NULL, NULL, static_cast<const mixal::BitRange*>($1)); }
+
+literal_constant : TOKEN_EQ expression TOKEN_EQ
+                   { $$ = new mixal::LiteralConstant(static_cast<const mixal::IntValue*>($2)); }
 
 op : TOKEN_OP_NOP
      { $$ = new mixal::Opcode(TOKEN_OP_NOP, "NOP"); }
@@ -589,13 +593,13 @@ orig : TOKEN_ORIG expression
        { $$ = new mixal::Orig(static_cast<const mixal::IntValue*>($2)); }
 
 con : TOKEN_CON w_part
-      { $$ = new mixal::Con(static_cast<const mixal::WExpression*>($2)); }
+      { $$ = new mixal::Con(static_cast<mixal::WExpression*>($1)); }
 
 alf : TOKEN_ALF_STR
       { $$ = new mixal::Alf(std::string(yytext + strlen(yytext) - 5)); } 
 
 end : TOKEN_END w_part
-      { $$ = new mixal::End(static_cast<const mixal::WExpression*>($2)); }
+      { $$ = new mixal::End(static_cast<mixal::WExpression*>($1)); }
 
 statement : operation
             { $$ = new mixal::Statement(NULL, $1, NULL); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
@@ -618,7 +622,7 @@ statement : operation
           | symbol_decl orig statement
             { $$ = new mixal::Statement(static_cast<const mixal::SymbolDecl *>($1), $2, static_cast<const mixal::Statement *>($3)); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
           | con
-            { $$ = new mixal::Statement(NULL, $1, NULL); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
+            { $$ = new mixal::Statement(NULL, $1, NULL); ; add_statement(statements, static_cast<const mixal::Statement *>($$)); }
           | con statement
             { $$ = new mixal::Statement(NULL, $1, static_cast<const mixal::Statement *>($2)); add_statement(statements, static_cast<const mixal::Statement *>($$)); }
           | symbol_decl con

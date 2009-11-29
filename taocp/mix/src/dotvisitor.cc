@@ -33,7 +33,7 @@ void DotVisitor::visit(AstNode *parent, AstNode &node)
 
 		Alf *alf = dynamic_cast<Alf *>(&node);
 		if(alf) {
-			mOutput << "\t\"" << alf << "\" [shape=box, label=\"ALF:" << alf->str() << "\"];" << std::endl;
+			mOutput << "\t\"" << alf << "\" [shape=box, label=\"" << alf->address << ":" << "ALF:" << alf->str() << "\"];" << std::endl;
 		}
 
 		Equ *equ = dynamic_cast<Equ *>(&node);
@@ -48,7 +48,7 @@ void DotVisitor::visit(AstNode *parent, AstNode &node)
 
 		SymbolRef *symbolRef = dynamic_cast<SymbolRef *>(&node);
 		if(symbolRef) {
-			mOutput << "\t\"" << symbolRef << "\" [label=\"[" << symbolRef->symbol() << "] " << (symbolRef->resolved() ? symbolRef->value() : -1) << "\"];" << std::endl;
+			mOutput << "\t\"" << symbolRef << "\" [label=\"[" << symbolRef->symbol() << "]\"];" << std::endl;
 		}
 
 		Constant *constant = dynamic_cast<Constant *>(&node);
@@ -88,12 +88,12 @@ void DotVisitor::visit(AstNode *parent, AstNode &node)
 
 		Operation *operation = dynamic_cast<Operation *>(&node);
 		if(operation) {
-			mOutput << "\t\"" << operation << "\" [label=\"" << operation->address << ":" << operation->opcode()->token() << "\"];" << std::endl;
+			mOutput << "\t\"" << operation << "\" [label=\"" << operation->opcode()->token() << "\"];" << std::endl;
 		}
 
 		LiteralConstant *literalConstant = dynamic_cast<LiteralConstant *>(&node);
 		if(literalConstant) {
-			mOutput << "\t\"" << literalConstant << "\" [label=LCON];" << std::endl;
+			mOutput << "\t\"" << literalConstant << "\" [label=CON];" << std::endl;
 		}
 
 		WExpression *wExpression = dynamic_cast<WExpression*>(&node);
@@ -108,7 +108,7 @@ void DotVisitor::visit(AstNode *parent, AstNode &node)
 
 		Con *con = dynamic_cast<Con *>(&node);
 		if(con) {
-			mOutput << "\t\"" << con << "\" [label=\"" << con->address << ":" << "CON\", shape=box];" << std::endl;
+			mOutput << "\t\"" << con << "\" [label=CON, shape=box];" << std::endl;
 		}
 
 		End *end = dynamic_cast<End *>(&node);

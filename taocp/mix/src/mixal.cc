@@ -17,7 +17,7 @@ Program::Program()
 {
 }
 
-void Program::parse(const std::string& filename)
+Statement *Program::parse(const std::string& filename)
 {
 	yyin = NULL;
 	try {
@@ -49,6 +49,8 @@ void Program::parse(const std::string& filename)
 			DotVisitor dotVisitor(output);
 			statements.back()->accept(NULL, dotVisitor);
 		}
+
+		return statements.back();
 	} catch(const char *msg) {
 		if(yyin) {
 			fclose(yyin);
@@ -69,7 +71,7 @@ void AstNode::accept(AstNode *parent, AstNodeVisitor &visitor)
 }
 
 Alf::Alf(std::string str)
-	: mStr(str)
+	: mStr(str), address(-1)
 {
 }
 
@@ -325,7 +327,7 @@ IntValue *WExpression::address() const
 }
 
 Con::Con(WExpression *wExpression)
-	: mWExpression(wExpression), address(-1)
+	: mWExpression(wExpression)
 {
 }
 
@@ -395,16 +397,6 @@ Opcode *Operation::opcode() const
 	return mOpcode;
 }
 
-WExpression *Operation::wExpression() const
-{
-	return mWExpression;
-}
-
-void Operation::setWExpression(WExpression *wExpression)
-{
-	mWExpression = wExpression;
-}
-
 Equ::Equ(SymbolDecl *symbol, IntValue *value)
 	: mSymbol(symbol), mValue(value)
 {
@@ -458,12 +450,7 @@ LiteralConstant::LiteralConstant(IntValue *value)
 {
 }
 
-int LiteralConstant::value() const
-{
-	return mValue->value();
-}
-
-IntValue *LiteralConstant::intValue() const
+IntValue *LiteralConstant::value() const
 {
 	return mValue;
 }
@@ -479,7 +466,7 @@ void LiteralConstant::accept(AstNode *parent, AstNodeVisitor &visitor)
 }
 
 Statement::Statement(const SymbolDecl *label, AstNode *cmd, Statement *next)
-	: mLabel(label), mCmd(cmd), next(next)
+	: mLabel(label), mCmd(cmd), mNext(next)
 {
 }
 
@@ -490,8 +477,8 @@ void Statement::accept(AstNode *parent, AstNodeVisitor &visitor)
 		mCmd->accept(this, visitor);
 	}
 	visitor.visit(parent, *this);
-	if(next) {
-		next->accept(this, visitor);
+	if(mNext) {
+		mNext->accept(this, visitor);
 	}
 	visitor.postVisit(parent, *this);
 }
@@ -501,10 +488,16 @@ const SymbolDecl *Statement::label() const
 	return mLabel;
 }
 
-AstNode *Statement::cmd() const
+const AstNode *Statement::cmd() const
 {
 	return mCmd;
 }
+
+const Statement *Statement::next() const
+{
+	return mNext;
+}
+
 }
 
 void yyerror(char const *msg) {

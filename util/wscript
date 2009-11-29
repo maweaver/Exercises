@@ -24,7 +24,12 @@ def configure(conf):
 def build(bld):
 	utils                 =    bld.new_task_gen()
 	utils.features        =   'd dstaticlib'
-	utils.source          =   'dll.d dlx.d elliptic.d leftheap.d maze.d point.d queue.d size.d stack.d visualizer.d wrappedint.d'
+	utils.source          =   'dll.d dlx.d elliptic.d graph.d leftheap.d maze.d point.d queue.d qsort.d size.d stack.d visualizer.d wrappedint.d'
 	utils.target          =   'utils'
 	utils.env             =    bld.env_of_name('dmd').copy()
 
+	test                  =    bld.new_task_gen()
+	test.features         =   'd dprogram'
+	test.source           =    'qsort.d test.d'
+	test.target           =   'test'
+	test.env              =    bld.env_of_name('dmd').copy()
