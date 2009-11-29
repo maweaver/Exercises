@@ -35,10 +35,15 @@ def configure(conf):
 	conf.env['DLINKFLAGS'] = [ '-L-L../../util/build/default' ]
 
 def build(bld):
-	addrev                =    bld.new_task_gen()
-	addrev.features       =   'cc cprogram'
-	addrev.source         =   'addrev.c'
-	addrev.target         =   'addrev'
+	addrev               =    bld.new_task_gen()
+	addrev.features      =   'cc cprogram'
+	addrev.source        =   'addrev.c'
+	addrev.target        =   'addrev'
+
+	fctrl                =    bld.new_task_gen()
+	fctrl.features       =   'cc cprogram'
+	fctrl.source         =   'fctrl.c'
+	fctrl.target         =   'fctrl'
 
 	intss                =    bld.new_task_gen()
 	intss.features       =   'cc cprogram'
