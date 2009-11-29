@@ -40,6 +40,12 @@ def build(bld):
 	addrev.source        =   'addrev.c'
 	addrev.target        =   'addrev'
 
+	bulk                 =    bld.new_task_gen()
+	bulk.features        =   'cc cprogram'
+	bulk.source          =   'bulk.c'
+	bulk.target          =   'bulk'
+	bulk.defines         =   'BULK_DUMP_OBJ'
+
 	fctrl                =    bld.new_task_gen()
 	fctrl.features       =   'cc cprogram'
 	fctrl.source         =   'fctrl.c'
@@ -68,8 +74,7 @@ def build(bld):
 	recequ.libs          =    [ 'utils' ]
 	recequ.env           =    bld.env_of_name('dmd').copy()
 
-	bulk                 =    bld.new_task_gen()
-	bulk.features        =   'cc cprogram'
-	bulk.source          =   'bulk.c'
-	bulk.target          =   'bulk'
-	bulk.defines         =   'BULK_DUMP_OBJ'
+	sbank                =    bld.new_task_gen()
+	sbank.features       =   'cc cprogram'
+	sbank.source         =   'sbank.c'
+	sbank.target         =   'sbank'
